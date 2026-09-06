@@ -79,12 +79,13 @@ jobs:
             echo "::warning::Upstream changes conflict with the current repository; preparing a pull request."
           fi
 
-          existing_pr="$(gh pr list \
-            --base "${BASE_BRANCH}" \
-            --head "${SYNC_BRANCH}" \
-            --state open \
-            --json number \
-            --jq '.[0].number')"
+          existing_pr="$(gh api \
+            --method GET \
+            "repos/${GITHUB_REPOSITORY}/pulls" \
+            -f state=open \
+            -f base="${BASE_BRANCH}" \
+            -f head="${GITHUB_REPOSITORY_OWNER}:${SYNC_BRANCH}" \
+            --jq '.[0].number // empty')"
 
           if [ -n "${existing_pr}" ]; then
             echo "needs_pr=true" >> "$GITHUB_OUTPUT"
@@ -107,22 +108,31 @@ jobs:
         run: |
           set -euo pipefail
 
-          pr_number="$(gh pr list \
-            --base "${BASE_BRANCH}" \
-            --head "${SYNC_BRANCH}" \
-            --state open \
-            --json number \
-            --jq '.[0].number')"
+          pr_number="$(gh api \
+            --method GET \
+            "repos/${GITHUB_REPOSITORY}/pulls" \
+            -f state=open \
+            -f base="${BASE_BRANCH}" \
+            -f head="${GITHUB_REPOSITORY_OWNER}:${SYNC_BRANCH}" \
+            --jq '.[0].number // empty')"
 
           title="Sync upstream (${UPSTREAM_REPOSITORY})"
           body=$'This pull request is maintained automatically by the upstream sync workflow.\n\nIt imports changes from ['"${UPSTREAM_REPOSITORY}"'](https://github.com/'"${UPSTREAM_REPOSITORY}"'/tree/'"${UPSTREAM_BRANCH}"'). The changes could not be merged directly into '"${BASE_BRANCH}"', so please resolve the conflicts and merge this pull request manually.'
 
           if [ -n "${pr_number}" ]; then
-            gh pr edit "${pr_number}" --title "${title}" --body "${body}"
+            gh api \
+              --method PATCH \
+              "repos/${GITHUB_REPOSITORY}/pulls/${pr_number}" \
+              -f title="${title}" \
+              -f body="${body}" \
+              --silent
           else
-            gh pr create \
-              --base "${BASE_BRANCH}" \
-              --head "${SYNC_BRANCH}" \
-              --title "${title}" \
-              --body "${body}"
+            gh api \
+              --method POST \
+              "repos/${GITHUB_REPOSITORY}/pulls" \
+              -f base="${BASE_BRANCH}" \
+              -f head="${SYNC_BRANCH}" \
+              -f title="${title}" \
+              -f body="${body}" \
+              --jq '.html_url'
           fi
