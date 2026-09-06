@@ -1,4 +1,7 @@
-# LinkSheet [![Translations](https://img.shields.io/weblate/progress/linksheet)](https://hosted.weblate.org/projects/linksheet/) [![Build status](https://img.shields.io/github/actions/workflow/status/LinkSheet/LinkSheet/build-nightly.yml)](https://github.com/LinkSheet/LinkSheet/actions/workflows/build-nightly.yml) ![Discord](https://img.shields.io/discord/1137845851344081038?label=discord) [![Latest Github nightly release](https://img.shields.io/github/v/release/LinkSheet/nightly?label=download&color=orange)](https://github.com/LinkSheet/nightly/releases/latest)
+# LinkSheet (Fork) [![Translations](https://img.shields.io/weblate/progress/linksheet)](https://hosted.weblate.org/projects/linksheet/) [![Build status](https://img.shields.io/github/actions/workflow/status/LinkSheet/LinkSheet/build-nightly.yml)](https://github.com/LinkSheet/LinkSheet/actions/workflows/build-nightly.yml) ![Discord](https://img.shields.io/discord/1137845851344081038?label=discord) [![Latest Github nightly release](https://img.shields.io/github/v/release/LinkSheet/nightly?label=download&color=orange)](https://github.com/LinkSheet/nightly/releases/latest)
+
+> [!IMPORTANT]
+> This repository is a **fork** of the original [LinkSheet/LinkSheet](https://github.com/LinkSheet/LinkSheet) project. It is not the official upstream repository. Changes, issues, releases, and downloads may differ from the original project. Some badges and download links in this README still refer to the official upstream resources.
 
 
 
@@ -80,6 +83,9 @@
 
 Currently, LinkSheet uses a "nightly" "rolling release" model which allows for fast development iteration at the cost of stability; However, since this has proven to work quite well, there usually aren't any issues to be expected.
 
+This fork creates a signed GitHub pre-release automatically after every change merged into `master`.
+The APK is published in the [releases of this fork](https://github.com/RBN-Apps/LinkSheet/releases) and can be tracked with [Obtainium](https://github.com/ImranR98/Obtainium) by adding `https://github.com/RBN-Apps/LinkSheet` as a GitHub source and enabling pre-releases.
+
 <!--
 * Latest build is always available via [nightly.link](https://nightly.link/LinkSheet/LinkSheet/workflows/build-nightly/master/linksheet-nightly.zip)
 -->
@@ -95,6 +101,11 @@ Currently, LinkSheet uses a "nightly" "rolling release" model which allows for f
 
 * Translations are managed via [Weblate](https://hosted.weblate.org/projects/linksheet/)
 * All translations except for English are maintained by contributors
+
+## Upstream synchronization
+
+This repository follows the original [LinkSheet/LinkSheet](https://github.com/LinkSheet/LinkSheet) project.
+The [upstream sync workflow](.github/workflows/sync-upstream.yml) checks for changes daily and merges them directly into `master` when possible. If conflicts exist, it opens a pull request for manual resolution.
 
 ## Discord
 
