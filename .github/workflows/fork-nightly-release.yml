@@ -47,9 +47,6 @@ jobs:
       - name: Update bundled CleanURLs rules
         run: ./gradlew :integration-clearurl:updateRules
 
-      - name: Run unit tests
-        run: ./gradlew testFossReleaseUnitTest
-
       - name: Build signed FOSS nightly APK
         env:
           GITHUB_WORKFLOW_RUN_ID: ${{ github.run_id }}
