@@ -12,7 +12,7 @@ permissions:
   actions: write
 
 concurrency:
-  group: sync-upstream
+  group: repository-maintenance
   cancel-in-progress: false
 
 env:

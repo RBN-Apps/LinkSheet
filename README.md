@@ -85,6 +85,7 @@ Currently, LinkSheet uses a "nightly" "rolling release" model which allows for f
 
 This fork creates a signed GitHub pre-release automatically after every change merged into `master`.
 The APK is published in the [releases of this fork](https://github.com/RBN-Apps/LinkSheet/releases) and can be tracked with [Obtainium](https://github.com/ImranR98/Obtainium) by adding `https://github.com/RBN-Apps/LinkSheet` as a GitHub source and enabling pre-releases.
+The bundled ClearURLs rules are refreshed from [RBN-Apps/CleanURLs-Rules](https://github.com/RBN-Apps/CleanURLs-Rules) before each build. A daily rules workflow commits changed rules and starts a new nightly release.
 
 <!--
 * Latest build is always available via [nightly.link](https://nightly.link/LinkSheet/LinkSheet/workflows/build-nightly/master/linksheet-nightly.zip)

@@ -11,7 +11,7 @@ import java.net.http.HttpResponse
 
 abstract class UpdateRulesTask : DefaultTask() {
     companion object {
-        const val RULES_JSON_URL = "https://raw.githubusercontent.com/ClearURLs/Rules/master/data.min.json"
+        const val RULES_JSON_URL = "https://raw.githubusercontent.com/RBN-Apps/CleanURLs-Rules/master/data.min.json"
     }
 
     @get:Input
@@ -27,6 +27,10 @@ abstract class UpdateRulesTask : DefaultTask() {
             .build()
 
         val response = HttpClient.newHttpClient().send(request, HttpResponse.BodyHandlers.ofString())
+
+        check(response.statusCode() in 200..299) {
+            "Unable to download ClearURLs rules: HTTP ${response.statusCode()} from $RULES_JSON_URL"
+        }
 
         jsonFile.writeText(response.body())
     }

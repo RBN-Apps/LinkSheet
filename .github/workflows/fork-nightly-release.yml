@@ -44,6 +44,9 @@ jobs:
           fileName: linksheet-fork-signing.jks
           encodedString: ${{ secrets.KEYSTORE_FILE }}
 
+      - name: Update bundled CleanURLs rules
+        run: ./gradlew :integration-clearurl:updateRules
+
       - name: Run unit tests
         run: ./gradlew testFossReleaseUnitTest
 
