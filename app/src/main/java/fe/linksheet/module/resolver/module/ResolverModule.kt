@@ -102,6 +102,7 @@ val ResolverModule = module {
 
 data class IntentResolverSettings(
     val useClearUrls: () -> Boolean,
+    val clearUrlsRemoveAllQueryProviders: () -> Set<String>,
     val useFastForwardRules: () -> Boolean,
     val requestTimeout: () -> Int,
     val resolveEmbeds: () -> Boolean,
@@ -179,6 +180,7 @@ fun createSettings(
 ): IntentResolverSettings {
     return IntentResolverSettings(
         useClearUrls = prefRepo.asFunction(AppPreferences.useClearUrls),
+        clearUrlsRemoveAllQueryProviders = prefRepo.asFunction(AppPreferences.clearUrlsRemoveAllQueryProviders),
         useFastForwardRules = prefRepo.asFunction(AppPreferences.useFastForwardRules),
         requestTimeout = prefRepo.asFunction(AppPreferences.requestTimeout),
         resolveEmbeds = prefRepo.asFunction(AppPreferences.resolveEmbeds),

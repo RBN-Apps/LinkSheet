@@ -16,7 +16,8 @@ import kotlinx.coroutines.withContext
 
 class ClearURLsLinkModifier(
     private val ioDispatcher: CoroutineDispatcher = Dispatchers.IO,
-    override val enabled: () -> Boolean
+    override val enabled: () -> Boolean,
+    private val removeAllQueryProviders: () -> Set<String> = { emptySet() },
 ) : LinkModifier<ClearURLsModifyOutput>, InPlaceStep {
     override val id = EngineStepId.ClearURLs
 
@@ -36,7 +37,7 @@ class ClearURLsLinkModifier(
 
     context(context: EngineRunContext)
     override suspend fun runStep(url: StdUrl) = withContext(ioDispatcher) {
-        val result = clearUrls?.clearUrl(url.toString())
+        val result = clearUrls?.clearUrl(url.toString(), removeAllQueryProviders())
         result?.let { (url, operations) -> ClearURLsModifyOutput(url.toStdUrlOrThrow(), operations) }
     }
 }

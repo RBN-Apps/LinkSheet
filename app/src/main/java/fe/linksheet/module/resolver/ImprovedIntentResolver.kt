@@ -580,7 +580,9 @@ class ImprovedIntentResolver(
         if (clearUrl && clearUrls == null) {
             logger.error("ClearURLs is enabled, but rules failed to load, ignoring..")
         }
-        runUriModifier(clearUrl) { clearUrls?.clearUrl(url) }?.let { url = it.first }
+        runUriModifier(clearUrl) {
+            clearUrls?.clearUrl(url, settings.clearUrlsRemoveAllQueryProviders())
+        }?.let { url = it.first }
 
         return runCatching { Uri.parse(url) }.getOrNull()
     }

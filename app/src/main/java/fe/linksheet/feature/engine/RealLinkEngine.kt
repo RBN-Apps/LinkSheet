@@ -118,6 +118,7 @@ class RealLinkEngine(
                 ),
                 ClearURLsLinkModifier(
                     enabled = settings.useClearUrls,
+                    removeAllQueryProviders = settings.clearUrlsRemoveAllQueryProviders,
                     ioDispatcher = dispatcher
                 ),
                 FollowRedirectsLinkResolver(
