@@ -18,6 +18,7 @@ concurrency:
 env:
   UPSTREAM_REPOSITORY: LinkSheet/LinkSheet
   UPSTREAM_BRANCH: master
+  SYNC_BRANCH: automation/sync-upstream
 
 jobs:
   sync:
@@ -29,6 +30,7 @@ jobs:
         uses: actions/checkout@v4
         with:
           fetch-depth: 0
+          token: ${{ secrets.SYNC_TOKEN }}
 
       - name: Configure Git
         run: |
@@ -49,7 +51,7 @@ jobs:
         run: |
           set -euo pipefail
 
-          git checkout -B "${BASE_BRANCH}" "origin/${BASE_BRANCH}"
+          git checkout -B "${SYNC_BRANCH}" "origin/${BASE_BRANCH}"
 
           # Nothing needs to be synchronized when the upstream tip is already
           # contained in this repository's default branch.
@@ -66,11 +68,8 @@ jobs:
               echo "needs_pr=false" >> "$GITHUB_OUTPUT"
               echo "Upstream changes were merged directly into ${BASE_BRANCH}."
 
-              # A push made with GITHUB_TOKEN does not trigger another workflow.
-              # Dispatch the nightly workflow explicitly after a direct sync.
-              gh workflow run fork-nightly-release.yml \
-                --repo "${GITHUB_REPOSITORY}" \
-                --ref "${BASE_BRANCH}"
+              # SYNC_TOKEN is used for this push, so the nightly push trigger
+              # runs normally after a successful direct synchronization.
               exit 0
             fi
 
@@ -80,10 +79,9 @@ jobs:
             echo "::warning::Upstream changes conflict with the current repository; preparing a pull request."
           fi
 
-          pr_head="${UPSTREAM_REPOSITORY%%/*}:${UPSTREAM_BRANCH}"
           existing_pr="$(gh pr list \
             --base "${BASE_BRANCH}" \
-            --head "${pr_head}" \
+            --head "${SYNC_BRANCH}" \
             --state open \
             --json number \
             --jq '.[0].number')"
@@ -94,9 +92,10 @@ jobs:
             exit 0
           fi
 
-          # Use the upstream branch directly as the pull request head. This
-          # avoids pushing upstream workflow-file changes with GITHUB_TOKEN,
-          # which GitHub rejects for security reasons.
+          # SYNC_TOKEN has Contents and Workflows write access, allowing this
+          # branch to contain upstream changes to GitHub Actions workflows.
+          git checkout -B "${SYNC_BRANCH}" "upstream/${UPSTREAM_BRANCH}"
+          git push --force origin "HEAD:${SYNC_BRANCH}"
           echo "needs_pr=true" >> "$GITHUB_OUTPUT"
 
       - name: Create or update pull request
@@ -108,10 +107,9 @@ jobs:
         run: |
           set -euo pipefail
 
-          pr_head="${UPSTREAM_REPOSITORY%%/*}:${UPSTREAM_BRANCH}"
           pr_number="$(gh pr list \
             --base "${BASE_BRANCH}" \
-            --head "${pr_head}" \
+            --head "${SYNC_BRANCH}" \
             --state open \
             --json number \
             --jq '.[0].number')"
@@ -124,7 +122,7 @@ jobs:
           else
             gh pr create \
               --base "${BASE_BRANCH}" \
-              --head "${pr_head}" \
+              --head "${SYNC_BRANCH}" \
               --title "${title}" \
               --body "${body}"
           fi
