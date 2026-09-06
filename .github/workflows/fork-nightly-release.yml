@@ -91,9 +91,45 @@ jobs:
           build_number=$(printf '%02d' "$(( (GITHUB_RUN_NUMBER + GITHUB_RUN_ATTEMPT - 1) % 100 ))")
           NIGHTLY_TAG="nightly-$(date -u +%Y%m%d)${build_number}"
 
-          gh release create "$NIGHTLY_TAG" "$APK_FILE" \
+          previous_nightly_tag=$(gh release list \
+            --repo "$GITHUB_REPOSITORY" \
+            --limit 100 \
+            --json tagName,isPrerelease \
+            --jq '[.[] | select(.isPrerelease and (.tagName | startswith("nightly-")))][0].tagName // ""')
+
+          if [[ -n "$previous_nightly_tag" ]]; then
+            previous_nightly_sha=$(gh api \
+              "repos/${GITHUB_REPOSITORY}/git/ref/tags/${previous_nightly_tag}" \
+              --jq '.object.sha')
+
+            if [[ "$(git rev-parse --is-shallow-repository)" == "true" ]]; then
+              git fetch --no-tags --unshallow origin "$GITHUB_REF_NAME"
+            fi
+
+            changes=$(git log \
+              --first-parent \
+              --format='%h%x09%H%x09%s' \
+              "${previous_nightly_sha}..${GITHUB_SHA}" | \
+              while IFS=$'\t' read -r short_sha full_sha subject; do
+                printf -- '- [`%s`](https://github.com/%s/commit/%s) %s\n' \
+                  "$short_sha" "$GITHUB_REPOSITORY" "$full_sha" "$subject"
+              done)
+            changes_title="## Changes since ${previous_nightly_tag}"
+          else
+            changes="- Initial fork nightly release"
+            changes_title="## Changes"
+          fi
+
+          if [[ -z "$changes" ]]; then
+            changes="- No repository commits since the previous nightly"
+          fi
+
+          printf '%s\n\n%s\n\n%s\n' \
+            "Automatic nightly build from commit \`${GITHUB_SHA}\`." \
+            "$changes_title" \
+            "$changes" | gh release create "$NIGHTLY_TAG" "$APK_FILE" \
             --repo "$GITHUB_REPOSITORY" \
             --target "$GITHUB_SHA" \
             --title "LinkSheet Fork Nightly $VERSION_NAME ($VERSION_CODE)" \
-            --notes "Automatic nightly build from commit $GITHUB_SHA." \
+            --notes-file - \
             --prerelease
