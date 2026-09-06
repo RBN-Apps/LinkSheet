@@ -1,8 +1,8 @@
 package app.linksheet.feature.engine.core.fetcher
 
-import app.linksheet.feature.downloader.DownloadCheckResult
-import app.linksheet.feature.downloader.Downloader
-import app.linksheet.feature.downloader.isDownloadable
+import app.linksheet.feature.downloader.core.DownloadCheckResult
+import app.linksheet.feature.downloader.core.Downloader
+import app.linksheet.feature.downloader.core.isDownloadable
 import fe.std.uri.StdUrl
 import kotlinx.coroutines.CoroutineDispatcher
 import kotlinx.coroutines.Dispatchers
@@ -33,8 +33,6 @@ class DownloadLinkFetcher(
 sealed interface DownloadCheckFetchResult : FetchResult {
     data class Downloadable(
         val fileName: String,
-        val extension: String?,
-        val toFileName: String
     ) : DownloadCheckFetchResult
 
     data object MimeTypeDetectionFailed : DownloadCheckFetchResult
@@ -43,7 +41,7 @@ sealed interface DownloadCheckFetchResult : FetchResult {
 
 fun DownloadCheckResult.toFetchResult(): DownloadCheckFetchResult {
     return when (this) {
-        is DownloadCheckResult.Downloadable -> DownloadCheckFetchResult.Downloadable(fileName, extension, toFileName())
+        is DownloadCheckResult.Downloadable -> DownloadCheckFetchResult.Downloadable(fileName)
         DownloadCheckResult.MimeTypeDetectionFailed -> DownloadCheckFetchResult.MimeTypeDetectionFailed
         DownloadCheckResult.NonDownloadable -> DownloadCheckFetchResult.NonDownloadable
     }
@@ -51,7 +49,7 @@ fun DownloadCheckResult.toFetchResult(): DownloadCheckFetchResult {
 
 fun DownloadCheckFetchResult.toFetchResult(): DownloadCheckResult {
     return when (this) {
-        is DownloadCheckFetchResult.Downloadable -> DownloadCheckResult.Downloadable(fileName, extension)
+        is DownloadCheckFetchResult.Downloadable -> DownloadCheckResult.Downloadable(fileName)
         DownloadCheckFetchResult.MimeTypeDetectionFailed -> DownloadCheckResult.MimeTypeDetectionFailed
         DownloadCheckFetchResult.NonDownloadable -> DownloadCheckResult.NonDownloadable
     }

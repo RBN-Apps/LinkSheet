@@ -1,50 +1,70 @@
-
+import app.linksheet.buildsrc.FlavorDimensions
+import app.linksheet.buildsrc.ProductFlavors
+import com.gitlab.grrfe.gradlebuild.Version
 import com.gitlab.grrfe.gradlebuild.android.AndroidSdk
 import com.gitlab.grrfe.gradlebuild.android.ArchiveBaseName
-import com.gitlab.grrfe.gradlebuild.common.version.CurrentTagMode
-import com.gitlab.grrfe.gradlebuild.common.version.TagReleaseParser
-import com.gitlab.grrfe.gradlebuild.common.version.asProvider
-import com.gitlab.grrfe.gradlebuild.common.version.closure
+import com.gitlab.grrfe.gradlebuild.android.extension.buildConfig
+import com.gitlab.grrfe.gradlebuild.android.extension.buildStringConfigField
+import com.gitlab.grrfe.gradlebuild.android.version.DefaultFallbackVersionCodeProducer
+import com.gitlab.grrfe.gradlebuild.android.version.SemverProducer
+import com.gitlab.grrfe.gradlebuild.android.version.VersionCodeProducer
+import com.gitlab.grrfe.gradlebuild.android.version.createAndroidVersionProvider
+import com.gitlab.grrfe.gradlebuild.common.CompilerOption
+import com.gitlab.grrfe.gradlebuild.common.KotlinCompilerArgs
+import com.gitlab.grrfe.gradlebuild.common.PluginOption
+import com.gitlab.grrfe.gradlebuild.util.LocalPropertiesFile
+import com.gitlab.grrfe.gradlebuild.util.PropertiesFile
+import com.gitlab.grrfe.gradlebuild.util.PublicLocalPropertiesFile
+import com.gitlab.grrfe.gradlebuild.util.SystemEnvironment
+import com.gitlab.grrfe.gradlebuild.util.propertiesProvider
+import com.gitlab.grrfe.gradlebuild.util.withProviders
 import fe.build.dependencies.Grrfe
-import fe.build.dependencies.MozillaComponents
 import fe.build.dependencies._1fexd
-import fe.buildlogic.Version
-import fe.buildlogic.common.CompilerOption
-import fe.buildlogic.common.PluginOption
-import fe.buildlogic.common.extension.addCompilerOptions
-import fe.buildlogic.common.extension.addPluginOptions
-import fe.buildlogic.extension.buildConfig
-import fe.buildlogic.extension.buildStringConfigField
-import fe.buildlogic.extension.getOrSystemEnv
-import fe.buildlogic.extension.readPropertiesOrNull
-import fe.buildlogic.version.AndroidVersionStrategy
+import fe.buildsrc.LocaleConfigTask
+import java.time.LocalDate
+import java.time.format.DateTimeFormatter
 
 plugins {
-    kotlin("android")
     kotlin("plugin.compose")
     kotlin("plugin.serialization")
     id("com.android.application")
     id("androidx.navigation.safeargs.kotlin")
     id("kotlin-parcelize")
-    id("net.nemerosa.versioning")
-    id("androidx.room")
+    id("androidx.room3")
     id("com.google.devtools.ksp")
     id("dev.rikka.tools.refine")
-    id("com.gitlab.grrfe.new-build-logic-plugin")
-    id("de.mannodermaus.android-junit5")
-}
-
-// Must be defined before the android block, or else it won't work
-versioning {
-    releaseMode = CurrentTagMode.closure
-    releaseParser = TagReleaseParser.closure
+    id("com.gitlab.grrfe.android-build-plugin")
+    id("de.mannodermaus.android-junit")
 }
 
 val appName = "LinkSheet"
+val localProperties = rootProject.propertiesProvider(LocalPropertiesFile)
+val publicLocalProperties = rootProject.propertiesProvider(PublicLocalPropertiesFile)
+
+val localProviders = withProviders(localProperties, SystemEnvironment)
+val publicLocalProviders = withProviders(publicLocalProperties, SystemEnvironment)
+val supportedLocales = publicLocalProviders.get("SUPPORTED_LOCALES")?.split(",") ?: emptyList()
+
+object NightlyTagVersionCodeProducer : VersionCodeProducer {
+    private fun readResolve(): Any = NightlyTagVersionCodeProducer
+    private val DTF: DateTimeFormatter = DateTimeFormatter.ofPattern("yyyyMMdd")
+    private val NIGHTLY_TAG_REGEX = Regex("^nightly-(\\d{4})(\\d{2})(\\d{2})(\\d{2})$")
+
+    override fun produceVersionCode(tag: String): Int? {
+        println("Handling nightly tag $tag")
+        val match = NIGHTLY_TAG_REGEX.matchEntire(tag)?.groupValues ?: return null
+
+        val (_, year, month, day, buildNum) = match
+        val date = LocalDate.of(year.toInt(), month.toInt(), day.toInt())
+        val dateStr = date.format(DTF) + buildNum.padStart(1, '0')
+
+        return dateStr.toIntOrNull()
+    }
+}
 
 android {
     namespace = "fe.linksheet"
-    compileSdk = AndroidSdk.COMPILE_SDK
+    compileSdk = app.linksheet.buildsrc.Sdk.CompileSdk
 
     defaultConfig {
         applicationId = "fe.linksheet"
@@ -52,41 +72,32 @@ android {
         targetSdk = AndroidSdk.COMPILE_SDK
 
         val now = System.currentTimeMillis()
-        val provider = AndroidVersionStrategy(now)
 
-        val versionProvider = versioning.asProvider(project, provider)
+        val versionProvider = createAndroidVersionProvider(
+            versionCodeProducer = { tag ->
+                NightlyTagVersionCodeProducer.produceVersionCode(tag) ?: SemverProducer.produceVersionCode(tag)
+            },
+            fallbackVersionCodeProducer = DefaultFallbackVersionCodeProducer
+        )
         val (name, code, commit, branch) = versionProvider.get()
-
         versionCode = code
         versionName = name
 
-        with(ArchiveBaseName) { project.setArchivesBaseName(appName, name, now) }
+        with(ArchiveBaseName) {
+            project.base.setArchivesName(appName, name, now)
+        }
 
-        val localProperties = rootProject.file("local.properties").readPropertiesOrNull()
-        val publicLocalProperties = rootProject.file("public.local.properties").readPropertiesOrNull()
-
-        val supportedLocales = publicLocalProperties.getOrSystemEnv("SUPPORTED_LOCALES")?.split(",") ?: emptyList()
-        resourceConfigurations.addAll(supportedLocales)
-        tasks.register("createLocaleConfig") {
-            val localeString = supportedLocales.joinToString(
-                separator = System.lineSeparator(),
-            ) { "\t<locale android:name=\"$it\" />" }
-
-            val xml = """<?xml version="1.0" encoding="utf-8"?>
-            |<locale-config xmlns:android="http://schemas.android.com/apk/res/android">
-            |$localeString 
-            |</locale-config>
-            """.trimMargin()
-
-            file("src/main/res/xml/locales_config.xml").writeText(xml)
+        androidResources {
+            @Suppress("UnstableApiUsage")
+            localeFilters += supportedLocales
         }
 
         buildConfig {
             stringArray("SUPPORTED_LOCALES", supportedLocales)
-            int("DONATION_BANNER_MIN", localProperties.getOrSystemEnv("DONATION_BANNER_MIN")?.toIntOrNull() ?: 20)
+            int("DONATION_BANNER_MIN", localProviders.get("DONATION_BANNER_MIN")?.toIntOrNull() ?: 20)
 
             arrayOf("LINK_DISCORD", "LINK_BUY_ME_A_COFFEE", "LINK_CRYPTO").forEach {
-                string(it, publicLocalProperties.getOrSystemEnv(it))
+                string(it, publicLocalProviders.get(it))
             }
 
             long("BUILT_AT", now)
@@ -94,51 +105,42 @@ android {
             string("BRANCH", branch)
             boolean("IS_CI", System.getenv("CI")?.toBooleanStrictOrNull() == true)
             string("GITHUB_WORKFLOW_RUN_ID", System.getenv("GITHUB_WORKFLOW_RUN_ID"))
-            string("APTABASE_API_KEY", localProperties.getOrSystemEnv("APTABASE_API_KEY"))
-            boolean(
-                "ANALYTICS_SUPPORTED",
-                localProperties.getOrSystemEnv("ANALYTICS_SUPPORTED")?.toBooleanStrictOrNull() != false
-            )
-
-            string("FLAVOR_CONFIG", System.getenv("FLAVOR_CONFIG"))
-            string("API_HOST", localProperties.getOrSystemEnv("API_HOST"))
+            string("FLAVOR_CONFIG", localProviders.get("FLAVOR_CONFIG"))
         }
 
-        testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
+//        testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
+        testInstrumentationRunner = "fe.linksheet.CustomTestRunner"
         testInstrumentationRunnerArguments["runnerBuilder"] = "de.mannodermaus.junit5.AndroidJUnit5Builder"
         testOptions.unitTests.isIncludeAndroidResources = true
 
         vectorDrawables {
             useSupportLibrary = true
         }
-
-        room {
-            schemaDirectory("$projectDir/schemas")
-            generateKotlin = true
-        }
     }
 
     signingConfigs {
         register("env") {
-            val properties = rootProject.file(".ignored/keystore.properties").readPropertiesOrNull()
-
-            storeFile = properties.getOrSystemEnv("KEYSTORE_FILE_PATH")?.let { rootProject.file(it) }
-            storePassword = properties.getOrSystemEnv("KEYSTORE_PASSWORD")
-            keyAlias = properties.getOrSystemEnv("KEY_ALIAS")
-            keyPassword = properties.getOrSystemEnv("KEY_PASSWORD")
+            val properties = with(PropertiesFile) {
+                rootProject.file(".ignored/keystore.properties").readPropertiesOrNull()
+            }
+            val provider = withProviders(properties, SystemEnvironment)
+            storeFile = provider.get("KEYSTORE_FILE_PATH")?.let { rootProject.file(it) }
+            storePassword = provider.get("KEYSTORE_PASSWORD")
+            keyAlias = provider.get("KEY_ALIAS")
+            keyPassword = provider.get("KEY_PASSWORD")
         }
     }
 
-    flavorDimensions += listOf("type")
+    flavorDimensions += FlavorDimensions.TYPE
 
     productFlavors {
-        register("foss") {
-            dimension = "type"
+        register(ProductFlavors.FOSS) {
+            dimension = FlavorDimensions.TYPE
             buildStringConfigField("FLAVOR", "Foss")
         }
 
-        register("pro") {
-            dimension = "type"
+        register(ProductFlavors.PRO) {
+            dimension = FlavorDimensions.TYPE
 
             applicationIdSuffix = ".pro"
             versionNameSuffix = "-pro"
@@ -156,6 +158,8 @@ android {
 
         release {
             isMinifyEnabled = true
+            isShrinkResources = true
+            signingConfig = signingConfigs.getByName("env")
             proguardFiles(
                 getDefaultProguardFile("proguard-android-optimize.txt"),
                 "proguard-rules.pro",
@@ -165,7 +169,6 @@ android {
         register("nightly") {
             initWith(buildTypes.getByName("release"))
             matchingFallbacks.add("release")
-            signingConfig = signingConfigs.getByName("env")
 
             applicationIdSuffix = ".nightly"
             versionNameSuffix = "-nightly"
@@ -189,7 +192,6 @@ android {
         register("migrate") {
             initWith(buildTypes.getByName("release"))
             matchingFallbacks.add("release")
-            signingConfig = signingConfigs.getByName("env")
 
             resValue("string", "app_name", "$appName Migrate")
         }
@@ -206,15 +208,14 @@ android {
         isCoreLibraryDesugaringEnabled = true
     }
 
-    kotlin {
-        jvmToolchain(Version.JVM)
-        addCompilerOptions(CompilerOption.WhenGuards, CompilerOption.NestedTypeAliases)
-        addPluginOptions(PluginOption.Parcelize.ExperimentalCodeGeneration to true)
-    }
-
     buildFeatures {
         aidl = true
         buildConfig = true
+        resValues = true
+    }
+
+    packaging {
+        resources.pickFirsts += "**/google/protobuf/**"
     }
 
     lint {
@@ -238,15 +239,34 @@ android {
     }
 
     val androidTest by sourceSets
-    androidTest.assets.srcDir("$projectDir/schemas")
+    androidTest.assets.directories.add("$projectDir/schemas")
     rootProject.findProject(":feature-libredirect")?.projectDir?.resolve("schemas")?.let {
-        androidTest.assets.srcDir(it)
+        androidTest.assets.directories.add(it.absolutePath)
     }
 
     val main by sourceSets
     for (it in arrayOf("compat", "experiment", "testing")) {
-        main.java.srcDir("src/main/$it")
+        main.kotlin.directories.add("src/main/$it")
     }
+}
+
+tasks.register<LocaleConfigTask>("createLocaleConfig") {
+    locales.set(supportedLocales)
+    outputFile.set(file("src/main/res/xml/locales_config.xml"))
+}
+
+kotlin {
+    jvmToolchain(Version.JVM)
+//    addCompilerOptions()
+//    addPluginOptions(PluginOption.Parcelize.ExperimentalCodeGeneration to true)
+    with(compilerOptions.freeCompilerArgs) {
+        addAll(KotlinCompilerArgs.createCompilerOptions(CompilerOption.SkipPreReleaseCheck))
+        addAll(KotlinCompilerArgs.createPluginOptions(PluginOption.Parcelize.ExperimentalCodeGeneration to true))
+    }
+}
+
+room3 {
+    schemaDirectory("$projectDir/schemas")
 }
 
 junitPlatform {
@@ -256,6 +276,9 @@ junitPlatform {
 }
 
 dependencies {
+    implementation(project(":feature-analytics-service"))
+    debugImplementation(project(":feature-analytics-aptabase"))
+    implementation(project(":feature-backup-impl"))
     implementation(project(":feature-app"))
     implementation(project(":feature-browser"))
     implementation(project(":feature-devicecompat"))
@@ -265,26 +288,29 @@ dependencies {
     implementation(project(":feature-shizuku"))
     implementation(project(":feature-systeminfo"))
     implementation(project(":feature-profile"))
+    implementation(project(":feature-remoteconfig"))
     implementation(project(":feature-wiki"))
     implementation(project(":integration-clearurl"))
     implementation(project(":integration-embed-resolve"))
     implementation(project(":integration-amp2html"))
+    implementation("androidx.sqlite:sqlite-bundled:_")
 
-    compileOnly(project(":hidden-api"))
+    compileOnly(project(":lib-hidden-api"))
     implementation(project(":config"))
-    implementation(project(":log"))
-    implementation(project(":util"))
-    implementation(project(":api"))
-    implementation(project(":common"))
-    implementation(project(":compose"))
+    implementation(_1fexd.composeKit.ext.mozillaSupportBase)
+    implementation(project(":lib-http"))
+    implementation(project(":lib-util"))
+    implementation(project(":lib-api"))
+    implementation(project(":lib-compose"))
 
-    implementation(project(":bottom-sheet"))
-    implementation(project(":bottom-sheet-new"))
-    implementation(project(":scaffold"))
+    implementation(project(":lib-bottom-sheet"))
+    implementation(project(":lib-bottom-sheet-new"))
+    implementation(project(":lib-scaffold"))
     implementation(project(":test-fake"))
 
     testImplementation(project(":test-core"))
     testImplementation(project(":test-koin"))
+    androidTestImplementation(project(":test-koin"))
     androidTestImplementation(project(":test-instrument"))
 
 //    implementation(platform(Square.okHttp3.bom))
@@ -319,9 +345,9 @@ dependencies {
     implementation(AndroidX.work.runtimeKtx)
     testImplementation(AndroidX.work.testing)
 
-    implementation(AndroidX.room.runtime)
-    implementation(AndroidX.room.ktx)
-    ksp(AndroidX.room.compiler)
+    implementation("androidx.room3:room3-runtime:_")
+    implementation("androidx.room3:room3-sqlite-wrapper:_")
+    ksp("androidx.room3:room3-compiler:_")
 
     implementation(Google.android.material)
     implementation(Google.accompanist.permissions)
@@ -329,7 +355,6 @@ dependencies {
     implementation(Koin.android)
     implementation(Koin.compose)
     implementation(Koin.workManager)
-    implementation("org.jetbrains.kotlin:kotlin-reflect:_")
 
     implementation("io.coil-kt.coil3:coil-compose:_")
     implementation("io.coil-kt.coil3:coil-core:_")
@@ -337,6 +362,7 @@ dependencies {
     implementation("io.coil-kt.coil3:coil-network-okhttp:_")
     implementation("io.coil-kt.coil3:coil-network-okhttp:_")
     implementation("io.coil-kt.coil3:coil-network-ktor3:_")
+    implementation("io.coil-kt.coil3:coil-svg:_")
     implementation("io.coil-kt.coil3:coil-test:_")
 
     implementation("com.github.seancfoley:ipaddress:_")
@@ -345,8 +371,8 @@ dependencies {
 
 //    implementation(LinkSheet.flavors.core)
 //    implementation(LinkSheet.flavors.interconnect.core)
-    implementation("com.github.LinkSheet.flavors:interconnect-core:0.0.18")
-    implementation("com.github.LinkSheet.flavors:core:0.0.18")
+    implementation("com.github.LinkSheet.flavors:interconnect-core:_")
+    implementation("com.github.LinkSheet.flavors:core:_")
 
     implementation(JetBrains.ktor.client.core)
     implementation(JetBrains.ktor.client.gson)
@@ -368,8 +394,6 @@ dependencies {
     implementation(Grrfe.std.uri)
     implementation(Grrfe.std.stringbuilder)
     implementation(Grrfe.std.test)
-    implementation(Grrfe.std.process.core)
-
 
     implementation(Grrfe.httpkt.core)
     implementation(Grrfe.httpkt.serialization.gson)
@@ -378,7 +402,7 @@ dependencies {
     implementation(Grrfe.gsonExt.koin)
 
     implementation(Grrfe.signify)
-    implementation(_1fexd.fastForward)
+    implementation(project(":integration-fastforward"))
     implementation("com.github.1fexd.libredirectkt:lib:_")
 
     implementation(_1fexd.composeKit.compose.core)
@@ -392,13 +416,13 @@ dependencies {
     implementation(_1fexd.composeKit.core)
     testImplementation(_1fexd.composeKit.core)
     implementation(_1fexd.composeKit.koin)
-    implementation(_1fexd.composeKit.process)
     implementation(_1fexd.composeKit.lifecycle.compose)
     implementation(_1fexd.composeKit.lifecycle.core)
     implementation(_1fexd.composeKit.lifecycle.koin)
     implementation(_1fexd.composeKit.lifecycle.network.core)
     implementation(_1fexd.composeKit.lifecycle.network.koin)
     implementation(_1fexd.composeKit.preference.core)
+    implementation(_1fexd.composeKit.preference.util)
     implementation(_1fexd.composeKit.preference.compose.core)
     implementation(_1fexd.composeKit.preference.compose.core2)
     implementation(_1fexd.composeKit.preference.compose.mock)
@@ -407,7 +431,6 @@ dependencies {
     implementation(_1fexd.composeKit.span.compose)
 
     runtimeOnly(AndroidX.annotation)
-
 
     implementation("app.cash.zipline:zipline-android:_")
     implementation("app.cash.zipline:zipline-loader-android:_")
@@ -420,30 +443,29 @@ dependencies {
     implementation("dev.rikka.shizuku:api:_")
     implementation("dev.rikka.shizuku:provider:_")
     implementation("org.lsposed.hiddenapibypass:hiddenapibypass:_")
-    implementation("dev.rikka.tools.refine:runtime:_")
+    implementation("com.github.1fexd.HiddenApiRefinePlugin:runtime:4.4.1")
 
-    implementation(MozillaComponents.support.utils)
-    implementation(MozillaComponents.lib.publicSuffixList)
-    implementation(platform(KotlinX.serialization.bom))
     implementation(KotlinX.serialization.json)
+    implementation(KotlinX.serialization.json.okio)
     implementation(KotlinX.serialization.protobuf)
     implementation(KotlinX.serialization.cbor)
+    implementation("com.akuleshov7:ktoml-core:_")
+    implementation("com.akuleshov7:ktoml-file:_")
+    implementation("com.akuleshov7:ktoml-source:_")
 
     val commonTestDependencies = arrayOf(
         Koin.test,
-        Koin.junit4,
+//        Koin.junit4,
         Koin.android,
         KotlinX.coroutines.test,
         Grrfe.std.test,
         Grrfe.std.result.assert,
-        Testing.robolectric,
         CashApp.turbine,
-        AndroidX.room.testing,
+        "androidx.room3:room3-testing:_",
         AndroidX.test.ext.junit.ktx,
-        AndroidX.compose.ui.test,
-        AndroidX.compose.ui.testJunit4,
         "com.willowtreeapps.assertk:assertk:_",
-        AndroidX.test.espresso.core,
+//        AndroidX.test.espresso.core,
+        "io.mockk:mockk-android:1.14.9"
     )
 
     for (notation in commonTestDependencies) {
@@ -451,27 +473,30 @@ dependencies {
         testImplementation(notation)
     }
 
-    testImplementation(CashApp.turbine)
+    testImplementation(Testing.robolectric)
+
     testImplementation("org.mock-server:mockserver-client-java:_")
     testImplementation("org.testcontainers:mockserver:_")
     testImplementation("org.testcontainers:toxiproxy:_")
 
+    testImplementation(Testing.junit.jupiter.api)
     testRuntimeOnly(Testing.junit.jupiter.engine)
     testRuntimeOnly("org.junit.vintage:junit-vintage-engine:_")
     testImplementation(Testing.junit4)
 
-    testImplementation(Testing.junit.jupiter.api)
-    testRuntimeOnly(Testing.junit.jupiter.engine)
-    testImplementation(Testing.junit.jupiter.params)
-
-    androidTestImplementation(Testing.junit.jupiter.api)
     androidTestImplementation(AndroidX.test.uiAutomator)
     androidTestImplementation(AndroidX.test.coreKtx)
     androidTestImplementation(AndroidX.test.runner)
     androidTestImplementation(AndroidX.test.rules)
     androidTestImplementation(AndroidX.test.espresso.core)
-    androidTestImplementation(Testing.junit.jupiter.params)
-    androidTestImplementation("de.mannodermaus.junit5:android-test-compose:_")
+//    androidTestImplementation("de.mannodermaus.junit5:android-test-compose-junit6:2.0.1")
+//    androidTestImplementation("de.mannodermaus.junit5:android-test-runner-junit6:2.0.1")
+    androidTestImplementation(platform("org.junit:junit-bom:5.14.1"))
+    androidTestImplementation("org.junit.jupiter:junit-jupiter-api")
+    androidTestImplementation(AndroidX.compose.ui.test)
+//    androidTestImplementation("io.insert-koin:koin-test-junit5:4.2.1")
+//    androidTestImplementation("io.insert-koin:koin-test-junit4:4.2.1")
+
     testImplementation("com.github.gmazzo.okhttp.mock:mock-client:_")
     debugImplementation(Square.leakCanary.android)
     debugImplementation(AndroidX.compose.ui.tooling)

@@ -15,7 +15,7 @@ import org.junit.runner.RunWith
 import org.robolectric.annotation.Config
 
 @RunWith(AndroidJUnit4::class)
-@Config(sdk = [Build.VERSION_CODES.UPSIDE_DOWN_CAKE])
+@Config(sdk = [Build.VERSION_CODES.BAKLAVA])
 internal class DomainVerificationUseCaseTest : BaseUnitTest {
 
     @Test
@@ -40,7 +40,6 @@ internal class DomainVerificationUseCaseTest : BaseUnitTest {
                 resolveActivity = { _, _ -> null },
                 isLinkSheetCompat = { false },
                 isSelf = { false },
-                checkReferrerExperiment = { false }
             ),
             getApplicationInfoOrNull = { _, _ -> null },
             getInstalledPackages = { emptyList() },

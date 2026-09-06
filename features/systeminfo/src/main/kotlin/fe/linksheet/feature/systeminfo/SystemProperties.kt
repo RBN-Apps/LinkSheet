@@ -4,7 +4,9 @@ import app.linksheet.api.SystemProperties
 import fe.kotlin.extension.string.substringOrNull
 import fe.std.process.android.AndroidStartConfig
 import fe.std.process.launchProcess
-object RealSystemProperties : SystemProperties {
+
+class RealSystemProperties : SystemProperties {
+
     override fun get(key: String): String? {
         return android.os.SystemProperties.get(key)
     }

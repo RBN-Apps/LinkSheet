@@ -32,9 +32,9 @@ import fe.composekit.component.shape.CustomShapeDefaults
 import fe.kotlin.extension.iterable.getOrFirstOrNull
 import fe.linksheet.R
 import fe.linksheet.activity.bottomsheet.AppClickInteraction
+import fe.linksheet.activity.bottomsheet.AppInteraction
 import fe.linksheet.activity.bottomsheet.ClickModifier
 import fe.linksheet.activity.bottomsheet.ClickType
-import fe.linksheet.activity.bottomsheet.Interaction
 
 @Composable
 fun AppContentList(
@@ -45,9 +45,8 @@ fun AppContentList(
     hideChoiceButtons: Boolean,
     showNativeLabel: Boolean,
     showPackage: Boolean,
-    dispatch: (Interaction) -> Unit,
+    dispatch: (AppInteraction) -> Unit,
     isPrivateBrowser: suspend (hasUri: Boolean, info: ActivityAppInfo) -> Browser?,
-    showToast: (textId: Int, duration: Int, uiThread: Boolean) -> Unit,
 ) {
     val debug by LocalUiDebug.current.drawBorders.collectAsStateWithLifecycle()
     val state = rememberLazyListState()
@@ -57,7 +56,6 @@ fun AppContentList(
         hasPreferredApp = hasPreferredApp,
         hideChoiceButtons = hideChoiceButtons,
         dispatch = dispatch,
-        showToast = showToast,
     ) { modifier ->
         LazyColumn(
             modifier = modifier.debugBorder(debug, 1.dp, Color.Green),
@@ -128,7 +126,7 @@ fun AppListItem(
             )
 
             if (privateBrowser != null) {
-                CompositionLocalProvider(LocalMinimumInteractiveComponentEnforcement provides false) {
+                CompositionLocalProvider(LocalMinimumInteractiveComponentSize provides 0.dp) {
                     // TODO: Checkout if we should reduce this button's size
                     FilledTonalIconButton(onClick = {
                         onClick(
@@ -184,7 +182,6 @@ private fun AppContentListPreviewBase(apps: List<ActivityAppInfo>) {
             showPackage = false,
             dispatch = { },
             isPrivateBrowser = { _, _ -> null },
-            showToast = { _, _, _ -> }
         )
     }
 }

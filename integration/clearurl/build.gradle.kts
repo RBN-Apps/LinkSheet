@@ -1,10 +1,10 @@
 import fe.build.dependencies.Grrfe
-import fe.buildsrc.MetadataGeneratorTask
-import fe.buildsrc.UpdateRulesTask
+import fe.buildsrc.clearurls.MetadataGeneratorTask
+import fe.buildsrc.clearurls.UpdateRulesTask
 
 plugins {
     kotlin("jvm")
-    id("com.gitlab.grrfe.new-build-logic-plugin")
+    id("com.gitlab.grrfe.android-build-plugin")
 }
 
 kotlin {

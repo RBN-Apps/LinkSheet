@@ -1,0 +1,82 @@
+package app.linksheet.feature.devicecompat.miui
+
+import android.os.Build
+import androidx.test.ext.junit.runners.AndroidJUnit4
+import app.linksheet.api.DeviceInfo
+import app.linksheet.feature.devicecompat.util.BuildInfoFake
+import app.linksheet.testing.fake.device.Device
+import app.linksheet.testing.fake.device.Xiaomi11TPro_A13
+import app.linksheet.testing.fake.device.XiaomiMi5C
+import app.linksheet.testing.fake.device.XiaomiRedmi2a
+import app.linksheet.testing.fake.device.XiaomiRedmiNote13_A14
+import app.linksheet.testing.fake.device.XiaomiRedmiNote13_A15
+import app.linksheet.testing.fake.device.XiaomiRedmiNote3
+import app.linksheet.testing.fake.device.XiaomiRedmiNote4
+import assertk.assertThat
+import assertk.assertions.isEqualTo
+import assertk.tableOf
+import fe.linksheet.feature.systeminfo.RealSystemInfoService
+import fe.linksheet.testlib.core.BaseUnitTest
+import org.junit.Test
+import org.junit.runner.RunWith
+import org.robolectric.annotation.Config
+
+@RunWith(AndroidJUnit4::class)
+@Config(sdk = [Build.VERSION_CODES.BAKLAVA])
+internal class MiuiAuditorTest : BaseUnitTest  {
+    private val table = tableOf("device", "expectedDeviceInfo", "expectedMiui", "expectedFingerprint")
+        .row<Device, DeviceInfo, MiuiAuditor.MiuiVersion, String>(
+            XiaomiRedmi2a,
+            DeviceInfo("4.4.4", "Xiaomi", "HM 2A"),
+            MiuiAuditor.MiuiVersion("6", "V8"),
+            "Xiaomi/full_lte26007/lte26007:4.4.4/KTU84Q/V8.0.1.0.KHLCNDG:user/release-keys"
+        )
+        .row(
+            XiaomiRedmiNote3,
+            DeviceInfo("5.1.1", "Xiaomi", "Redmi Note 3"),
+            MiuiAuditor.MiuiVersion("6", "V8"),
+            "Xiaomi/kenzo/kenzo:5.1.1/LMY47V/V8.0.7.0.LHOCNDG:user/release-keys"
+        )
+        .row(
+            XiaomiRedmiNote4,
+            DeviceInfo("7.0", "Xiaomi", "Redmi Note 4"),
+            MiuiAuditor.MiuiVersion("6", "V8"),
+            "xiaomi/mido/mido:7.0/NRD90M/V8.5.4.0.NCFMIED:user/release-keys"
+        )
+        .row(
+            XiaomiMi5C,
+            DeviceInfo("7.1.2", "Xiaomi", "MI 5C"),
+            MiuiAuditor.MiuiVersion("6", "V8"),
+            "Xiaomi/meri/meri:7.1.2/N2G47J/V8.5.3.0.0.NCJCNED:user/release-keys"
+        )
+        .row(
+            Xiaomi11TPro_A13,
+            DeviceInfo("13", "QUALCOMM", "missi system image for arm64"),
+            MiuiAuditor.MiuiVersion("14", "V140"),
+            "Xiaomi/cas/missi:13/TKQ1.221114.001/V14.0.2.0.TJJCNXM:user/release-keys"
+        )
+        .row(
+            XiaomiRedmiNote13_A14,
+            DeviceInfo("14", "Xiaomi", "mainline"),
+            MiuiAuditor.MiuiVersion("816", "V816"),
+            "Xiaomi/aurorapro/miproduct:14/UKQ1.231003.002/V816.0.21.0.UNACNXM:user/release-keys"
+        )
+        .row(
+            XiaomiRedmiNote13_A15,
+            DeviceInfo("15", "Xiaomi", "mainline"),
+            MiuiAuditor.MiuiVersion("816", "V816"),
+            "Xiaomi/aurora/miproduct:15/AQ3A.240627.003/OS2.0.2.0.VNAEUXM:user/release-keys"
+        )
+
+    @Test
+    fun test() = table.forAll { device, expectedDeviceInfo, expectedMiui, expectedFingerprint ->
+        val infoService = RealSystemInfoService(device, buildInfo = BuildInfoFake.Info)
+
+        val auditor = MiuiAuditor(infoService)
+        val audit = auditor.audit(applicationContext)
+
+        assertThat(audit.deviceInfo).isEqualTo(expectedDeviceInfo)
+        assertThat(audit.miui).isEqualTo(expectedMiui)
+        assertThat(audit.fingerprint).isEqualTo(expectedFingerprint)
+    }
+}

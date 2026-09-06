@@ -1,17 +1,16 @@
+import com.gitlab.grrfe.gradlebuild.Version
 import com.gitlab.grrfe.gradlebuild.android.AndroidSdk
-import fe.buildlogic.Version
 
 plugins {
     id("com.android.library")
-    kotlin("android")
-    id("com.gitlab.grrfe.new-build-logic-plugin")
+    id("com.gitlab.grrfe.android-build-plugin")
 }
 
 group = "app.linksheet.testlib.koin"
 
 android {
     namespace = group.toString()
-    compileSdk = AndroidSdk.COMPILE_SDK
+    compileSdk = app.linksheet.buildsrc.Sdk.CompileSdk
 
     defaultConfig {
         minSdk = AndroidSdk.MIN_SDK
@@ -29,4 +28,5 @@ android {
 dependencies {
     api(Koin.core)
     api(Koin.test)
+    api("org.junit.jupiter:junit-jupiter-api:6.1.0")
 }

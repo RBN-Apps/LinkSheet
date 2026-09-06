@@ -8,7 +8,7 @@ import app.linksheet.feature.app.core.ManifestParser
 import app.linksheet.feature.app.core.domain.DomainVerificationManagerCompat
 import app.linksheet.feature.app.core.domain.VerificationState
 import app.linksheet.feature.app.core.domain.VerificationUnsupportedState
-import fe.linksheet.util.ApplicationInfoFlags
+import fe.composekit.flag.ApplicationInfoFlags
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.flow
 
@@ -45,7 +45,7 @@ class AllAppsUseCase(
 
         val appInfo = creator.toAppInfo(applicationInfo, null)
         val hosts = when (val state = domainVerificationManager.getDomainVerificationUserState(packageName)) {
-            null, is VerificationUnsupportedState -> manifestParser.parse(applicationInfo.sourceDir).toSet()
+            null, is VerificationUnsupportedState -> manifestParser.parseHosts(applicationInfo.sourceDir).toSet()
             is VerificationState -> state.hostToStateMap.keys
             else -> return null
         }

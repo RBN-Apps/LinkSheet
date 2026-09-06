@@ -1,9 +1,7 @@
 package fe.linksheet.activity.bottomsheet
 
-import android.app.Activity
 import android.content.Intent
 import android.net.Uri
-import android.widget.Toast
 import androidx.activity.result.ActivityResultLauncher
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
@@ -12,7 +10,12 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
-import androidx.compose.runtime.*
+import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.res.stringResource
@@ -25,11 +28,8 @@ import app.linksheet.compose.preview.PreviewContainer
 import app.linksheet.compose.theme.HkGroteskFontFamily
 import app.linksheet.feature.app.core.ActivityAppInfo
 import app.linksheet.feature.browser.core.Browser
-import app.linksheet.feature.downloader.DownloadCheckResult
+import app.linksheet.feature.downloader.core.DownloadCheckResult
 import app.linksheet.feature.profile.core.CrossProfile
-import app.linksheet.feature.profile.core.ProfileStatus
-import app.linksheet.feature.profile.core.ProfileSwitcher
-import app.linksheet.feature.profile.core.UserProfileInfo
 import app.linksheet.testing.asPreferredApp
 import app.linksheet.testing.fake.PackageInfoFakes
 import app.linksheet.testing.fake.toActivityAppInfo
@@ -46,7 +46,6 @@ import fe.linksheet.module.resolver.IntentResolveResult
 import fe.linksheet.module.resolver.ResolveModuleStatus
 import fe.linksheet.module.resolver.browser.BrowserMode
 import fe.linksheet.module.resolver.util.AppSorter
-import kotlinx.coroutines.CompletionHandler
 import kotlin.time.Clock
 import kotlin.time.ExperimentalTime
 
@@ -56,25 +55,20 @@ fun BottomSheetApps(
     modifier: Modifier = Modifier,
     result: IntentResolveResult.Default,
     imageLoader: ImageLoader?,
+    enableDownloader: Boolean,
     enableIgnoreLibRedirectButton: Boolean,
-    enableSwitchProfile: Boolean,
-    profileSwitcher: ProfileSwitcher,
-    enableUrlCopiedToast: Boolean,
-    enableDownloadStartedToast: Boolean,
     enableManualRedirect: Boolean,
-    hideAfterCopying: Boolean,
+    enableManualDownload: Boolean,
     bottomSheetNativeLabel: Boolean,
     gridLayout: Boolean,
     appListSelectedIdx: Int,
     isPrivateBrowser: suspend (Boolean, ActivityAppInfo) -> Browser?,
-    showToast: (Int, Int, Boolean) -> Unit,
-    copyUrl: (String, String) -> Unit,
-    startDownload: (String, DownloadCheckResult.Downloadable) -> Unit,
     controller: BottomSheetStateController,
     showPackage: Boolean,
     previewUrl: Boolean,
     hideBottomSheetChoiceButtons: Boolean,
     urlCardDoubleTap: Boolean,
+    profiles: List<CrossProfile>?,
 ) {
     val hasUri = result.uri != null
     val hasResolvedApps = result.resolved.isNotEmpty()
@@ -95,19 +89,14 @@ fun BottomSheetApps(
             ) {
                 UrlBarWrapper(
                     imageLoader = imageLoader,
-                    profileSwitcher = profileSwitcher,
                     result = result,
+                    enableDownloader = enableDownloader,
                     enableIgnoreLibRedirectButton = enableIgnoreLibRedirectButton,
-                    enableSwitchProfile = enableSwitchProfile,
-                    enableUrlCopiedToast = enableUrlCopiedToast,
-                    enableDownloadStartedToast = enableDownloadStartedToast,
+                    profiles = profiles,
                     enableUrlCardDoubleTap = urlCardDoubleTap,
                     enableManualRedirect = enableManualRedirect,
-                    hideAfterCopying = hideAfterCopying,
+                    enableManualDownload = enableManualDownload,
                     controller = controller,
-                    showToast = { id -> showToast(id, Toast.LENGTH_SHORT, false) },
-                    copyUrl = copyUrl,
-                    startDownload = startDownload,
                 )
 
                 HorizontalDivider(color = MaterialTheme.colorScheme.outline.copy(0.25f))
@@ -173,34 +162,17 @@ fun BottomSheetApps(
                 hideChoiceButtons = hideBottomSheetChoiceButtons,
                 showPackage = showPackage,
                 isPrivateBrowser = isPrivateBrowser,
-                showToast = showToast,
                 showNativeLabel = bottomSheetNativeLabel,
-                dispatch = controller.dispatch
+                dispatch = controller.dispatch,
             )
         }
     }
 }
 
-private object ProfileSwitcherStub : ProfileSwitcher {
-    override fun checkIsManagedProfile(): Boolean = false
-    override fun getStatus(): ProfileStatus = ProfileStatus.Unsupported
-    override fun getUserProfileInfo(status: ProfileStatus): UserProfileInfo? = null
-    override fun launchCrossProfileInteractSettings(activity: Activity): Boolean = false
-    override fun canQuickToggle(): Boolean = false
-    override fun switchTo(profile: CrossProfile, url: String, activity: Activity) {}
-    override fun startOther(profile: CrossProfile, activity: Activity) {}
-    override fun getProfiles(status: ProfileStatus): List<CrossProfile>? = null
-}
-
 object BottomSheetStateControllerStub : BottomSheetStateController {
     override val editorLauncher: ActivityResultLauncher<Intent>
         get() = TODO("Not yet implemented")
-    override val onNewIntent: (Intent) -> Unit = {}
-    override fun hideAndFinish() {}
-    override fun hide(onCompletion: CompletionHandler?) {}
-    override fun startActivity(intent: Intent) {}
-    override fun finish() {}
-    override val dispatch: (Interaction) -> Unit = {}
+    override val dispatch: (BottomSheetInteraction) -> Unit = {}
 }
 
 private class PreviewStateProvider() : PreviewParameterProvider<PreviewState> {
@@ -336,11 +308,12 @@ private fun BottomSheetAppsBasePreview(state: PreviewState, gridLayout: Boolean)
     val result = IntentResolveResult.Default(
         intent = Intent(),
         uri = Uri.parse("https://google.com"),
+        referrer = null,
         unfurlResult = null,
         referringPackageName = null,
         resolved = sorted,
         filteredItem = filtered,
-        alwaysPreferred = state.lastChosen.alwaysPreferred,
+        isRegularPreferredApp = state.lastChosen.alwaysPreferred && filtered != null,
         hasSingleMatchingOption = state.hasSingleMatchingOption,
         resolveModuleStatus = ResolveModuleStatus(),
         libRedirectResult = null,
@@ -350,26 +323,21 @@ private fun BottomSheetAppsBasePreview(state: PreviewState, gridLayout: Boolean)
     PreviewContainer {
         BottomSheetApps(
             result = result,
+            imageLoader = null,
+            enableDownloader = false,
             enableIgnoreLibRedirectButton = false,
-            enableSwitchProfile = false,
-            profileSwitcher = ProfileSwitcherStub,
-            enableUrlCopiedToast = false,
-            enableDownloadStartedToast = false,
             enableManualRedirect = false,
-            hideAfterCopying = false,
+            enableManualDownload = false,
             bottomSheetNativeLabel = false,
             gridLayout = gridLayout,
             appListSelectedIdx = -1,
             isPrivateBrowser = { hasUri, info -> null },
-            showToast = { textId, duration, uiThread -> },
-            copyUrl = { label, url -> },
-            startDownload = { uri, downloadable -> },
             controller = BottomSheetStateControllerStub,
             showPackage = false,
             previewUrl = true,
             hideBottomSheetChoiceButtons = state.hideBottomSheetChoiceButtons,
             urlCardDoubleTap = false,
-            imageLoader = null
+            profiles = null
         )
     }
 }
