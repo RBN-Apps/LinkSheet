@@ -386,7 +386,8 @@
                 "gclid",
                 "kw" ,
                 "si",
-                "pp"
+                "pp",
+                "is"
             ],
             "referralMarketing": [],
             "rawRules": [],
@@ -1188,7 +1189,9 @@
             "completeProvider": false,
             "rules": [
                 "igshid",
-                "igsh"
+                "igsh",
+                "igsi",
+                "stkn"
             ],
             "referralMarketing": [],
             "rawRules": [],
