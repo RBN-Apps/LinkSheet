@@ -50,6 +50,8 @@ jobs:
       - name: Build signed FOSS nightly APK
         env:
           GITHUB_WORKFLOW_RUN_ID: ${{ github.run_id }}
+          NIGHTLY_APPLICATION_ID_SUFFIX: .rbnapps.nightly
+          NIGHTLY_APP_NAME: LinkSheet RBN Nightly
           KEYSTORE_FILE_PATH: ${{ steps.keystore.outputs.filePath }}
           KEYSTORE_PASSWORD: ${{ secrets.KEYSTORE_PASSWORD }}
           KEY_ALIAS: ${{ secrets.KEY_ALIAS }}
