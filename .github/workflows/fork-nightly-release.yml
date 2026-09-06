@@ -82,11 +82,14 @@ jobs:
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           APK_FILE: app/build/outputs/apk/foss/nightly/${{ steps.apk.outputs.output_file }}
-          NIGHTLY_TAG: nightly-${{ steps.apk.outputs.version_code }}
           VERSION_NAME: ${{ steps.apk.outputs.version_name }}
           VERSION_CODE: ${{ steps.apk.outputs.version_code }}
         run: |
           set -euo pipefail
+
+          # app/build.gradle.kts expects nightly tags in nightly-YYYYMMDDNN format.
+          build_number=$(printf '%02d' "$(( (GITHUB_RUN_NUMBER + GITHUB_RUN_ATTEMPT - 1) % 100 ))")
+          NIGHTLY_TAG="nightly-$(date -u +%Y%m%d)${build_number}"
 
           gh release create "$NIGHTLY_TAG" "$APK_FILE" \
             --repo "$GITHUB_REPOSITORY" \
