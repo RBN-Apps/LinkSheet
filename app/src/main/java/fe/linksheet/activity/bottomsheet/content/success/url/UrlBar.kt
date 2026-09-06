@@ -12,6 +12,7 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.ContentCopy
 import androidx.compose.material.icons.filled.Download
 import androidx.compose.material.icons.filled.FastForward
+import androidx.compose.material.icons.outlined.CleaningServices
 import androidx.compose.material.icons.outlined.Edit
 import androidx.compose.material.icons.outlined.Share
 import androidx.compose.material.icons.rounded.DoubleArrow
@@ -21,6 +22,7 @@ import androidx.compose.material3.ElevatedAssistChip
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.remember
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.tooling.preview.Preview
@@ -38,6 +40,7 @@ import fe.android.compose.icon.iconPainter
 import fe.android.compose.text.DefaultContent.Companion.text
 import fe.android.compose.text.StringResourceContent.Companion.textContent
 import fe.android.compose.text.TextContent
+import fe.clearurlskt.queryRange
 import fe.linksheet.R
 import fe.linksheet.activity.TextEditorActivity
 import fe.linksheet.activity.bottomsheet.BottomSheetStateController
@@ -47,6 +50,7 @@ import fe.linksheet.activity.bottomsheet.IgnoreLibRedirectInteraction
 import fe.linksheet.activity.bottomsheet.ManualDownloadInteraction
 import fe.linksheet.activity.bottomsheet.ManualRedirectInteraction
 import fe.linksheet.activity.bottomsheet.PreferredAppChoiceButtonInteraction
+import fe.linksheet.activity.bottomsheet.RemoveTrackingParametersInteraction
 import fe.linksheet.activity.bottomsheet.ShareUrlInteraction
 import fe.linksheet.activity.bottomsheet.StartDownloadInteraction
 import fe.linksheet.activity.bottomsheet.SwitchProfileInteraction
@@ -59,20 +63,21 @@ import app.linksheet.feature.downloader.R as DownloaderR
 @Composable
 fun UrlBarWrapper(
     result: IntentResolveResult.Default,
+    uri: String,
     imageLoader: ImageLoader?,
     enableDownloader: Boolean,
     enableIgnoreLibRedirectButton: Boolean,
     enableUrlCardDoubleTap: Boolean,
     enableManualRedirect: Boolean,
     enableManualDownload: Boolean,
+    enableRemoveTrackingParameters: Boolean,
     controller: BottomSheetStateController,
     profiles: List<CrossProfile>?,
 ) {
-    val uriString = result.uri.toString()
     val context = LocalContext.current
 
     UrlBar(
-        uri = uriString,
+        uri = uri,
         imageLoader = imageLoader,
         profiles = profiles,
         switchProfile = profiles?.isNotEmpty()?.if2 { crossProfile, url ->
@@ -113,6 +118,9 @@ fun UrlBarWrapper(
         manualDownload = enableManualDownload.if2 { uri ->
             controller.dispatch(ManualDownloadInteraction(uri))
         },
+        removeTrackingParameters = enableRemoveTrackingParameters.if2 {
+            controller.dispatch(RemoveTrackingParametersInteraction)
+        },
         onDoubleClick = enableUrlCardDoubleTap.if2 {
             if (result.app != null) {
                 controller.dispatch(PreferredAppChoiceButtonInteraction(result.app, ClickModifier.None, result.intent))
@@ -142,8 +150,15 @@ fun UrlBar(
     ignoreLibRedirect: ((LibRedirectResult.Redirected) -> Unit)? = null,
     manualRedirect: ((String) -> Unit)? = null,
     manualDownload: ((String) -> Unit)? = null,
+    removeTrackingParameters: (() -> Unit)? = null,
     onDoubleClick: (() -> Unit)? = null,
 ) {
+    // Only offer (and preview) the removal while the url actually still carries parameters
+    val canRemoveTrackingParameters = removeTrackingParameters != null
+    val trackingRange = remember(uri, canRemoveTrackingParameters) {
+        if (canRemoveTrackingParameters) queryRange(uri) else null
+    }
+
     Column(
         modifier = Modifier.fillMaxWidth(),
         verticalArrangement = Arrangement.spacedBy(5.dp)
@@ -152,6 +167,7 @@ fun UrlBar(
             uri = uri,
             imageLoader = imageLoader,
             unfurlResult = unfurlResult,
+            dimmedRange = trackingRange,
             onDoubleClick = onDoubleClick
         )
 
@@ -173,6 +189,16 @@ fun UrlBar(
                     icon = Icons.Outlined.Share.iconPainter,
                     onClick = { shareUri(uri) }
                 )
+            }
+
+            if (trackingRange != null) {
+                item {
+                    UrlActionButton(
+                        text = textContent(R.string.bottom_sheet__button_open_without_tracking),
+                        icon = Icons.Outlined.CleaningServices.iconPainter,
+                        onClick = { removeTrackingParameters!!() }
+                    )
+                }
             }
 
             if (false) {
@@ -279,6 +305,7 @@ private fun UrlBarPreview() {
         downloadUri = null,
         ignoreLibRedirect = null,
         manualRedirect = null,
+        removeTrackingParameters = null,
         onDoubleClick = null,
     )
 }

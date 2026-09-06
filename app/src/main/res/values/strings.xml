@@ -1,5 +1,13 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources xmlns:tools="http://schemas.android.com/tools" tools:locale="en">
+    <string name="settings_links__title_open_without_tracking">“Open without tracking” button</string>
+    <string name="settings_links__subtitle_open_without_tracking">Adds a button to the bottom sheet which drops all remaining query parameters from the link before opening it. The parameters that would be dropped are greyed out in the URL preview.</string>
+    <string name="bottom_sheet__button_open_without_tracking">Open without tracking</string>
+    <string name="clear_urls_providers_title">Remove all query parameters</string>
+    <string name="clear_urls_providers_hint">Tap to configure providers</string>
+    <string name="clear_urls_providers_description">Always remove all query parameters for enabled providers when ClearURLs is on. Applies to the final link after redirects. This can break links that need parameters. Changes are saved immediately.</string>
+    <string name="clear_urls_providers_load_error">Could not load ClearURLs providers.</string>
+    <string name="clear_urls_providers_empty">No matching providers.</string>
     <string name="open_with">Open with</string>
     <string name="just_once">Just once</string>
     <string name="always">Always</string>

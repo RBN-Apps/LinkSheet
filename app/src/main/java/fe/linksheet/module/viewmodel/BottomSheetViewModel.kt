@@ -54,6 +54,7 @@ import fe.linksheet.module.resolver.util.Launchable
 import fe.linksheet.module.resolver.workaround.GithubWorkaround
 import fe.linksheet.module.viewmodel.base.BaseViewModel
 import fe.linksheet.extension.android.tryStartActivity
+import fe.clearurlskt.removeAllQueryParameters
 import fe.linksheet.util.intent.StandardIntents
 import fe.std.result.isSuccess
 import kotlinx.coroutines.Dispatchers
@@ -102,6 +103,8 @@ class BottomSheetViewModel(
     val bottomSheetNativeLabel = preferenceRepository.asViewModelState(AppPreferences.bottomSheet.bottomSheetNativeLabel)
     val expandFully = preferenceRepository.asViewModelState(AppPreferences.bottomSheet.expandFully)
     val doubleTapUrl = preferenceRepository.asViewModelState(AppPreferences.bottomSheet.doubleTapUrl)
+    val openWithoutTrackingButton =
+        preferenceRepository.asViewModelState(AppPreferences.bottomSheet.openWithoutTrackingButton)
     val interceptAccidentalTaps = experimentRepository.asViewModelState(Experiments.interceptAccidentalTaps)
     val downloaderEnabled = preferenceRepository.asViewModelState(AppPreferences.downloader.enable)
     val downloaderMode = preferenceRepository.asViewModelState(AppPreferences.downloader.mode)
@@ -114,6 +117,28 @@ class BottomSheetViewModel(
 
     private val _resolveResultFlow = MutableStateFlow<IntentResolveResult>(IntentResolveResult.Pending)
     val resolveResultFlow = _resolveResultFlow.asStateFlow()
+
+    private val _trackingParametersRemoved = MutableStateFlow(false)
+    val trackingParametersRemoved = _trackingParametersRemoved.asStateFlow()
+
+    fun removeTrackingParameters() {
+        _trackingParametersRemoved.value = true
+    }
+
+    /**
+     * The intent to launch, which is [IntentResolveResult.Default.intent] unless the user asked
+     * for the link's remaining query parameters to be dropped first.
+     */
+    private fun effectiveIntent(result: IntentResolveResult.Default): Intent {
+        if (!_trackingParametersRemoved.value) return result.intent
+
+        val url = result.uri?.toString() ?: return result.intent
+        val stripped = removeAllQueryParameters(url)
+        if (stripped == url) return result.intent
+
+        // Copy, since the resolve result (and thus its intent) stays in use afterwards
+        return Intent(result.intent).setDataAndType(stripped.toUri(), result.intent.type)
+    }
 
     fun warmupAsync() = viewModelScope.launch {
         intentResolver.warmup()
@@ -134,6 +159,7 @@ class BottomSheetViewModel(
     }
 
     fun resolveAsync(intent: SafeIntent, options: ResolveOptions, reset: Boolean = true) = viewModelScope.launch(Dispatchers.IO) {
+        _trackingParametersRemoved.value = false
         if (reset) {
             _resolveResultFlow.emit(IntentResolveResult.Pending)
         }
@@ -295,6 +321,7 @@ class BottomSheetViewModel(
         interaction: AppInteraction,
     ): LaunchIntent? {
         val info = interaction.info ?: return null
+        val intent = effectiveIntent(result)
         if (interaction is AppClickInteraction) {
             return handleClick(
                 activity = activity,
@@ -302,7 +329,7 @@ class BottomSheetViewModel(
                 isExpanded = false,
 //                    isExpanded = sheetState.isExpanded(),
                 requestExpand = { },
-                result = result.intent,
+                result = intent,
                 info = info,
                 type = interaction.type,
                 modifier = interaction.modifier
@@ -313,7 +340,7 @@ class BottomSheetViewModel(
             val modifier = interaction.modifier
             return makeOpenAppIntent(
                 info = info,
-                intent = result.intent,
+                intent = intent,
                 referrer = activity.referrer,
                 always = modifier is ClickModifier.Always,
                 privateBrowsingBrowser = (modifier as? ClickModifier.Private)?.browser,

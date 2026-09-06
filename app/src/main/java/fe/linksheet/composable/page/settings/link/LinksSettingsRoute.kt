@@ -1,6 +1,8 @@
 package fe.linksheet.composable.page.settings.link
 
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.getValue
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.compose.ui.res.stringResource
 import app.linksheet.compose.list.item.PreferenceDividedSwitchListItem
 import app.linksheet.compose.list.item.PreferenceSwitchListItem
@@ -27,18 +29,39 @@ fun LinksSettingsRoute(
     navigateNew: (Route) -> Unit,
     viewModel: LinksSettingsViewModel = koinViewModel()
 ) {
+    val providers by viewModel.clearUrlsProviders.collectAsStateWithLifecycle()
+    if (providers.visible) {
+        ClearUrlsProviderDialog(
+            state = providers,
+            onSearch = viewModel::searchClearUrlsProviders,
+            onToggle = viewModel::setRemoveAllQueryParameters,
+            onDismiss = { viewModel.showClearUrlsProviders(false) },
+        )
+    }
     SaneScaffoldSettingsPage(
         headline = stringResource(id = R.string.links),
         onBackPressed = onBackPressed
     ) {
-        group(size = 8) {
+        group(size = 9) {
             item(key = R.string.use_clear_urls) { padding, shape ->
-                PreferenceSwitchListItem(
+                PreferenceDividedSwitchListItem(
                     shape = shape,
                     padding = padding,
                     statePreference = viewModel.useClearUrls,
+                    onContentClick = { viewModel.showClearUrlsProviders(true) },
                     headlineContent = textContent(R.string.use_clear_urls),
+                    overlineContent = textContent(R.string.clear_urls_providers_hint),
                     supportingContent = annotatedStringResource(R.string.use_clear_urls_explainer),
+                )
+            }
+
+            item(key = R.string.settings_links__title_open_without_tracking) { padding, shape ->
+                PreferenceSwitchListItem(
+                    shape = shape,
+                    padding = padding,
+                    statePreference = viewModel.openWithoutTrackingButton,
+                    headlineContent = textContent(R.string.settings_links__title_open_without_tracking),
+                    supportingContent = textContent(R.string.settings_links__subtitle_open_without_tracking),
                 )
             }
 

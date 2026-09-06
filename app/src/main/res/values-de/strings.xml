@@ -1,5 +1,13 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
+    <string name="settings_links__title_open_without_tracking">Button „Ohne Tracking öffnen“</string>
+    <string name="settings_links__subtitle_open_without_tracking">Fügt dem Bottom Sheet einen Button hinzu, der alle verbliebenen Query-Parameter aus dem Link entfernt, bevor er geöffnet wird. Die Parameter, die dabei entfernt würden, werden in der URL-Vorschau ausgegraut.</string>
+    <string name="bottom_sheet__button_open_without_tracking">Ohne Tracking öffnen</string>
+    <string name="clear_urls_providers_title">Alle Query-Parameter entfernen</string>
+    <string name="clear_urls_providers_hint">Tippen, um Provider zu konfigurieren</string>
+    <string name="clear_urls_providers_description">Bei aktivierten Providern immer alle Query-Parameter entfernen, solange ClearURLs eingeschaltet ist. Gilt für den Ziel-Link nach Weiterleitungen. Links, die Parameter benötigen, können dadurch unbrauchbar werden. Änderungen werden sofort gespeichert.</string>
+    <string name="clear_urls_providers_load_error">ClearURLs-Provider konnten nicht geladen werden.</string>
+    <string name="clear_urls_providers_empty">Keine passenden Provider.</string>
     <string name="always">Immer</string>
     <string name="just_once">Nur einmal</string>
     <string name="default_apps">Bevorzugte Apps</string>

@@ -14,6 +14,7 @@ class BottomSheet(registry: PreferenceRegistry) {
     val bottomSheetNativeLabel = registry.boolean("bottom_sheet_native_label", true)
     val hideReferringApp = registry.boolean("hide_referrer_from_sheet")
     val doubleTapUrl = registry.boolean("double_tap_url")
+    val openWithoutTrackingButton = registry.boolean("open_without_tracking_button")
     val expandFully = registry.boolean("expand_fully")
 
     val openGraphPreview = OpenGraphPreview(registry)

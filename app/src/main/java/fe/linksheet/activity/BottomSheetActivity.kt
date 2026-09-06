@@ -30,6 +30,7 @@ import app.linksheet.feature.profile.core.switchTo
 import fe.composekit.mozilla.components.support.base.log.logger.Logger
 import app.linksheet.mozilla.components.support.utils.toSafeIntent
 import fe.composekit.extension.setText
+import fe.clearurlskt.removeAllQueryParameters
 import fe.composekit.preference.collectAsStateWithLifecycle
 import fe.linksheet.R
 import fe.linksheet.activity.bottomsheet.AppInteraction
@@ -44,6 +45,7 @@ import fe.linksheet.activity.bottomsheet.LaunchHandler
 import fe.linksheet.activity.bottomsheet.LaunchResult
 import fe.linksheet.activity.bottomsheet.ManualDownloadInteraction
 import fe.linksheet.activity.bottomsheet.ManualRedirectInteraction
+import fe.linksheet.activity.bottomsheet.RemoveTrackingParametersInteraction
 import fe.linksheet.activity.bottomsheet.ShareUrlInteraction
 import fe.linksheet.activity.bottomsheet.StartDownloadInteraction
 import fe.linksheet.activity.bottomsheet.SwitchProfileInteraction
@@ -279,6 +281,8 @@ class BottomSheetActivity : BaseComponentActivity(), KoinComponent {
                 val downloaderEnable by viewModel.downloaderEnabled.collectAsStateWithLifecycle()
                 val downloaderMode by viewModel.downloaderMode.collectAsStateWithLifecycle()
                 val doubleTapUrl by viewModel.doubleTapUrl.collectAsStateWithLifecycle()
+                val openWithoutTrackingButton by viewModel.openWithoutTrackingButton.collectAsStateWithLifecycle()
+                val trackingParametersRemoved by viewModel.trackingParametersRemoved.collectAsStateWithLifecycle()
 
                 BottomSheetApps(
                     modifier = modifier,
@@ -289,6 +293,7 @@ class BottomSheetActivity : BaseComponentActivity(), KoinComponent {
                     profiles = if (bottomSheetProfileSwitcher) viewModel.profileSwitcher.getProfiles() else null,
                     enableManualRedirect = followRedirectsEnabled && followRedirectsMode == FollowRedirectsMode.Manual,
                     enableManualDownload = downloaderEnable && downloaderMode == DownloaderMode.Manual,
+                    enableRemoveTrackingParameters = openWithoutTrackingButton,
                     bottomSheetNativeLabel = bottomSheetNativeLabel,
                     gridLayout = gridLayout,
                     appListSelectedIdx = viewModel.appListSelectedIdx.intValue,
@@ -297,7 +302,10 @@ class BottomSheetActivity : BaseComponentActivity(), KoinComponent {
                     showPackage = alwaysShowPackageName,
                     previewUrl = previewUrl,
                     hideBottomSheetChoiceButtons = hideBottomSheetChoiceButtons,
-                    urlCardDoubleTap = doubleTapUrl
+                    urlCardDoubleTap = doubleTapUrl,
+                    displayUri = resolveResult.uri?.toString()?.let { url ->
+                        if (trackingParametersRemoved) removeAllQueryParameters(url) else url
+                    }
                 )
             }
 
@@ -372,6 +380,10 @@ class BottomSheetActivity : BaseComponentActivity(), KoinComponent {
                     }
                 )
                 onNewIntent(intent)
+            }
+
+            is RemoveTrackingParametersInteraction -> {
+                viewModel.removeTrackingParameters()
             }
 
             is CopyUrlInteraction -> {
