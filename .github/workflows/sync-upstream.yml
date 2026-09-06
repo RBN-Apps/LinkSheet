@@ -18,7 +18,6 @@ concurrency:
 env:
   UPSTREAM_REPOSITORY: LinkSheet/LinkSheet
   UPSTREAM_BRANCH: master
-  SYNC_BRANCH: automation/sync-upstream
 
 jobs:
   sync:
@@ -50,7 +49,7 @@ jobs:
         run: |
           set -euo pipefail
 
-          git checkout -B "${SYNC_BRANCH}" "origin/${BASE_BRANCH}"
+          git checkout -B "${BASE_BRANCH}" "origin/${BASE_BRANCH}"
 
           # Nothing needs to be synchronized when the upstream tip is already
           # contained in this repository's default branch.
@@ -81,9 +80,10 @@ jobs:
             echo "::warning::Upstream changes conflict with the current repository; preparing a pull request."
           fi
 
+          pr_head="${UPSTREAM_REPOSITORY%%/*}:${UPSTREAM_BRANCH}"
           existing_pr="$(gh pr list \
             --base "${BASE_BRANCH}" \
-            --head "${SYNC_BRANCH}" \
+            --head "${pr_head}" \
             --state open \
             --json number \
             --jq '.[0].number')"
@@ -94,10 +94,9 @@ jobs:
             exit 0
           fi
 
-          # The branch represents the upstream tip. GitHub can then display
-          # and, where supported, resolve conflicts in the pull request.
-          git checkout -B "${SYNC_BRANCH}" "upstream/${UPSTREAM_BRANCH}"
-          git push --force origin "HEAD:${SYNC_BRANCH}"
+          # Use the upstream branch directly as the pull request head. This
+          # avoids pushing upstream workflow-file changes with GITHUB_TOKEN,
+          # which GitHub rejects for security reasons.
           echo "needs_pr=true" >> "$GITHUB_OUTPUT"
 
       - name: Create or update pull request
@@ -109,9 +108,10 @@ jobs:
         run: |
           set -euo pipefail
 
+          pr_head="${UPSTREAM_REPOSITORY%%/*}:${UPSTREAM_BRANCH}"
           pr_number="$(gh pr list \
             --base "${BASE_BRANCH}" \
-            --head "${SYNC_BRANCH}" \
+            --head "${pr_head}" \
             --state open \
             --json number \
             --jq '.[0].number')"
@@ -124,7 +124,7 @@ jobs:
           else
             gh pr create \
               --base "${BASE_BRANCH}" \
-              --head "${SYNC_BRANCH}" \
+              --head "${pr_head}" \
               --title "${title}" \
               --body "${body}"
           fi
