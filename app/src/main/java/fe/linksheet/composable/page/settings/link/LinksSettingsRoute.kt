@@ -42,7 +42,7 @@ fun LinksSettingsRoute(
         headline = stringResource(id = R.string.links),
         onBackPressed = onBackPressed
     ) {
-        group(size = 9) {
+        group(size = 10) {
             item(key = R.string.use_clear_urls) { padding, shape ->
                 PreferenceDividedSwitchListItem(
                     shape = shape,
@@ -62,6 +62,16 @@ fun LinksSettingsRoute(
                     statePreference = viewModel.openWithoutTrackingButton,
                     headlineContent = textContent(R.string.settings_links__title_open_without_tracking),
                     supportingContent = textContent(R.string.settings_links__subtitle_open_without_tracking),
+                )
+            }
+
+            item(key = R.string.select_link_parameters_title) { padding, shape ->
+                PreferenceSwitchListItem(
+                    shape = shape,
+                    padding = padding,
+                    statePreference = viewModel.selectLinkParameters,
+                    headlineContent = textContent(R.string.select_link_parameters_title),
+                    supportingContent = textContent(R.string.select_link_parameters_description),
                 )
             }
 

@@ -25,6 +25,7 @@ class LinksSettingsViewModel(
     val enableAmp2Html = preferenceRepository.asViewModelState(AppPreferences.amp2Html.enable)
     val urlPreview = preferenceRepository.asViewModelState(AppPreferences.bottomSheet.openGraphPreview.enable)
     val resolveEmbeds = preferenceRepository.asViewModelState(AppPreferences.resolveEmbeds)
+    val selectLinkParameters = preferenceRepository.asViewModelState(AppPreferences.bottomSheet.selectLinkParameters)
     val openWithoutTrackingButton =
         preferenceRepository.asViewModelState(AppPreferences.bottomSheet.openWithoutTrackingButton)
 

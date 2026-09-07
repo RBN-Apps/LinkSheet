@@ -71,6 +71,7 @@ fun BottomSheetApps(
     urlCardDoubleTap: Boolean,
     profiles: List<CrossProfile>?,
     displayUri: String? = result.uri?.toString(),
+    onSelectParameters: (() -> Unit)? = null,
 ) {
     val hasUri = result.uri != null
     val hasResolvedApps = result.resolved.isNotEmpty()
@@ -93,6 +94,7 @@ fun BottomSheetApps(
                     imageLoader = imageLoader,
                     result = result,
                     uri = displayUri.orEmpty(),
+                    onSelectParameters = onSelectParameters,
                     enableDownloader = enableDownloader,
                     enableIgnoreLibRedirectButton = enableIgnoreLibRedirectButton,
                     profiles = profiles,

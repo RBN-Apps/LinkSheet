@@ -73,11 +73,13 @@ fun UrlBarWrapper(
     enableRemoveTrackingParameters: Boolean,
     controller: BottomSheetStateController,
     profiles: List<CrossProfile>?,
+    onSelectParameters: (() -> Unit)? = null,
 ) {
     val context = LocalContext.current
 
     UrlBar(
         uri = uri,
+        onSelectParameters = onSelectParameters,
         imageLoader = imageLoader,
         profiles = profiles,
         switchProfile = profiles?.isNotEmpty()?.if2 { crossProfile, url ->
@@ -152,6 +154,7 @@ fun UrlBar(
     manualDownload: ((String) -> Unit)? = null,
     removeTrackingParameters: (() -> Unit)? = null,
     onDoubleClick: (() -> Unit)? = null,
+    onSelectParameters: (() -> Unit)? = null,
 ) {
     // Only offer (and preview) the removal while the url actually still carries parameters
     val canRemoveTrackingParameters = removeTrackingParameters != null
@@ -168,6 +171,7 @@ fun UrlBar(
             imageLoader = imageLoader,
             unfurlResult = unfurlResult,
             dimmedRange = trackingRange,
+            onClick = onSelectParameters,
             onDoubleClick = onDoubleClick
         )
 

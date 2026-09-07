@@ -551,4 +551,13 @@
     <string name="settings_verified_link_handler__text_no_hosts">No hosts!</string>
     <string name="settings_verified_link_handler__text_no_such_host_found">No such host found!</string>
     <string name="settings_verified_link_handler__placeholder_filter_hosts">Filter hosts</string>
+
+    <string name="select_link_parameters_title">Select link parameters</string>
+    <string name="select_link_parameters_description">Tap the link in the open dialog to choose which URL parameters to keep.</string>
+    <string name="link_parameters_title">Link parameters</string>
+    <string name="link_parameters_description">Selected parameters stay in the link. Apply your selection, then choose an app to open it.</string>
+    <string name="link_parameters_select_all">Select all</string>
+    <string name="link_parameters_deselect_all">Deselect all</string>
+    <string name="link_parameters_apply">Apply</string>
+    <string name="link_parameters_empty">This link has no query parameters.</string>
 </resources>
