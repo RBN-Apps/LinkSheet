@@ -2,8 +2,8 @@ name: Sync with upstream
 
 on:
   schedule:
-    # Run once a day, shortly after the upstream project is likely to have changed.
-    - cron: "17 3 * * *"
+    # Run once a week, shortly after the upstream project is likely to have changed.
+    - cron: "17 3 * * 1"
   workflow_dispatch:
 
 permissions:
