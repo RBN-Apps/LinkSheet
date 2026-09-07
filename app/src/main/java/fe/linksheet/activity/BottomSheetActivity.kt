@@ -30,7 +30,6 @@ import app.linksheet.feature.profile.core.switchTo
 import fe.composekit.mozilla.components.support.base.log.logger.Logger
 import app.linksheet.mozilla.components.support.utils.toSafeIntent
 import fe.composekit.extension.setText
-import fe.clearurlskt.removeAllQueryParameters
 import fe.composekit.preference.collectAsStateWithLifecycle
 import fe.linksheet.R
 import fe.linksheet.activity.bottomsheet.AppInteraction
@@ -46,6 +45,7 @@ import fe.linksheet.activity.bottomsheet.LaunchResult
 import fe.linksheet.activity.bottomsheet.ManualDownloadInteraction
 import fe.linksheet.activity.bottomsheet.ManualRedirectInteraction
 import fe.linksheet.activity.bottomsheet.RemoveTrackingParametersInteraction
+import fe.linksheet.activity.bottomsheet.content.success.url.LinkParameterDialog
 import fe.linksheet.activity.bottomsheet.ShareUrlInteraction
 import fe.linksheet.activity.bottomsheet.StartDownloadInteraction
 import fe.linksheet.activity.bottomsheet.SwitchProfileInteraction
@@ -284,6 +284,21 @@ class BottomSheetActivity : BaseComponentActivity(), KoinComponent {
                 val openWithoutTrackingButton by viewModel.openWithoutTrackingButton.collectAsStateWithLifecycle()
                 val trackingParametersRemoved by viewModel.trackingParametersRemoved.collectAsStateWithLifecycle()
 
+                val selectLinkParameters by viewModel.selectLinkParameters.collectAsStateWithLifecycle()
+                val parameterSelection by viewModel.parameterSelection.collectAsStateWithLifecycle()
+                val parameterDraft by viewModel.parameterDraft.collectAsStateWithLifecycle()
+                if (selectLinkParameters) {
+                    parameterDraft?.let { draft ->
+                        LinkParameterDialog(
+                            state = draft,
+                            onToggle = viewModel::selectParameter,
+                            onSelectAll = viewModel::selectAllParameters,
+                            onApply = viewModel::applyParameterSelection,
+                            onDismiss = viewModel::dismissParameterSelection,
+                        )
+                    }
+                }
+
                 BottomSheetApps(
                     modifier = modifier,
                     result = resolveResult,
@@ -303,9 +318,8 @@ class BottomSheetActivity : BaseComponentActivity(), KoinComponent {
                     previewUrl = previewUrl,
                     hideBottomSheetChoiceButtons = hideBottomSheetChoiceButtons,
                     urlCardDoubleTap = doubleTapUrl,
-                    displayUri = resolveResult.uri?.toString()?.let { url ->
-                        if (trackingParametersRemoved) removeAllQueryParameters(url) else url
-                    }
+                    displayUri = viewModel.displayUri(resolveResult, parameterSelection, trackingParametersRemoved),
+                    onSelectParameters = if (selectLinkParameters) viewModel::showParameterSelection else null,
                 )
             }
 

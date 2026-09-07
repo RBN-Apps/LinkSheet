@@ -24,6 +24,17 @@ import org.robolectric.annotation.Config
 @Config(sdk = [35], application = Application::class)
 class LinksSettingsViewModelTest {
     @Test
+    fun parameterSelectionIsOptInAndPersists() {
+        val application = ApplicationProvider.getApplicationContext<Application>()
+        val repository = DefaultAppPreferenceRepository(application)
+        val preference = AppPreferences.bottomSheet.selectLinkParameters
+        assertEquals(false, repository.get(preference))
+        repository.put(preference, true)
+        assertEquals(true, DefaultAppPreferenceRepository(application).get(preference))
+        repository.put(preference, false)
+    }
+
+    @Test
     fun providerTogglesUpdateVisibleStateResolverAndStorage() = runBlocking {
         Dispatchers.setMain(Dispatchers.Unconfined)
         val store = ViewModelStore()

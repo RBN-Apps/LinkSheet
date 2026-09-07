@@ -52,6 +52,7 @@ fun UrlCard(
     imageLoader: ImageLoader?,
     dimmedRange: IntRange? = null,
     onDoubleClick: (() -> Unit)? = null,
+    onClick: (() -> Unit)? = null,
 ) {
     val data = when (unfurlResult) {
         null -> null
@@ -63,6 +64,7 @@ fun UrlCard(
         data = data,
         imageLoader = imageLoader,
         dimmedRange = dimmedRange,
+        onClick = onClick,
         onDoubleClick = onDoubleClick
     )
 }
@@ -81,6 +83,7 @@ fun UrlCard(
     imageLoader: ImageLoader? = null,
     dimmedRange: IntRange? = null,
     onDoubleClick: (() -> Unit)? = null,
+    onClick: (() -> Unit)? = null,
 ) {
     val context = LocalContext.current
     var showFullUrl by remember { mutableStateOf(false) }
@@ -97,7 +100,8 @@ fun UrlCard(
             .fillMaxWidth()
             .clip(CardDefaults.shape)
             .combinedClickable(
-                onClick = {},
+                onClick = { onClick?.invoke() },
+                onClickLabel = if (onClick != null) androidx.compose.ui.res.stringResource(fe.linksheet.R.string.link_parameters_title) else null,
                 onDoubleClick = onDoubleClick,
                 onLongClick = {
                     showFullUrl = !showFullUrl

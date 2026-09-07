@@ -103,6 +103,7 @@ class BottomSheetViewModel(
     val bottomSheetNativeLabel = preferenceRepository.asViewModelState(AppPreferences.bottomSheet.bottomSheetNativeLabel)
     val expandFully = preferenceRepository.asViewModelState(AppPreferences.bottomSheet.expandFully)
     val doubleTapUrl = preferenceRepository.asViewModelState(AppPreferences.bottomSheet.doubleTapUrl)
+    val selectLinkParameters = preferenceRepository.asViewModelState(AppPreferences.bottomSheet.selectLinkParameters)
     val openWithoutTrackingButton =
         preferenceRepository.asViewModelState(AppPreferences.bottomSheet.openWithoutTrackingButton)
     val interceptAccidentalTaps = experimentRepository.asViewModelState(Experiments.interceptAccidentalTaps)
@@ -121,19 +122,67 @@ class BottomSheetViewModel(
     private val _trackingParametersRemoved = MutableStateFlow(false)
     val trackingParametersRemoved = _trackingParametersRemoved.asStateFlow()
 
+    private val _parameterSelection = MutableStateFlow<LinkParameterSelection?>(null)
+    val parameterSelection = _parameterSelection.asStateFlow()
+    private val _parameterDraft = MutableStateFlow<LinkParameterSelection?>(null)
+    val parameterDraft = _parameterDraft.asStateFlow()
+
+    fun showParameterSelection() {
+        if (!selectLinkParameters.value) return
+        val result = _resolveResultFlow.value as? IntentResolveResult.Default ?: return
+        val source = result.uri?.toString() ?: return
+        val selection = _parameterSelection.value?.takeIf { it.source == source }
+            ?: LinkParameterSelection.from(source).let {
+                if (_trackingParametersRemoved.value) it.selectAll(false) else it
+            }
+        _parameterDraft.value = selection
+    }
+
+    fun selectParameter(index: Int, keep: Boolean) {
+        _parameterDraft.value = _parameterDraft.value?.select(index, keep)
+    }
+
+    fun selectAllParameters(keep: Boolean) {
+        _parameterDraft.value = _parameterDraft.value?.selectAll(keep)
+    }
+
+    fun dismissParameterSelection() {
+        _parameterDraft.value = null
+    }
+
+    fun applyParameterSelection() {
+        val draft = _parameterDraft.value ?: return
+        val result = _resolveResultFlow.value as? IntentResolveResult.Default ?: return
+        if (selectLinkParameters.value && draft.source == result.uri?.toString()) {
+            _parameterSelection.value = draft
+            _trackingParametersRemoved.value = false
+        }
+        _parameterDraft.value = null
+    }
+
     fun removeTrackingParameters() {
+        _parameterSelection.value = null
+        _parameterDraft.value = null
         _trackingParametersRemoved.value = true
+    }
+
+    fun displayUri(
+        result: IntentResolveResult.Default,
+        selection: LinkParameterSelection?,
+        removed: Boolean,
+    ): String? {
+        val url = result.uri?.toString() ?: return null
+        if (removed) return removeAllQueryParameters(url)
+        return selection?.takeIf { selectLinkParameters.value && it.source == url }?.url ?: url
     }
 
     /**
      * The intent to launch, which is [IntentResolveResult.Default.intent] unless the user asked
-     * for the link's remaining query parameters to be dropped first.
+     * for query parameters to be removed or selected manually.
      */
     private fun effectiveIntent(result: IntentResolveResult.Default): Intent {
-        if (!_trackingParametersRemoved.value) return result.intent
-
         val url = result.uri?.toString() ?: return result.intent
-        val stripped = removeAllQueryParameters(url)
+        val stripped = displayUri(result, _parameterSelection.value, _trackingParametersRemoved.value) ?: url
         if (stripped == url) return result.intent
 
         // Copy, since the resolve result (and thus its intent) stays in use afterwards
@@ -160,6 +209,8 @@ class BottomSheetViewModel(
 
     fun resolveAsync(intent: SafeIntent, options: ResolveOptions, reset: Boolean = true) = viewModelScope.launch(Dispatchers.IO) {
         _trackingParametersRemoved.value = false
+        _parameterSelection.value = null
+        _parameterDraft.value = null
         if (reset) {
             _resolveResultFlow.emit(IntentResolveResult.Pending)
         }
