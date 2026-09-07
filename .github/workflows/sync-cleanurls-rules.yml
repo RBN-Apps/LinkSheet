@@ -3,7 +3,7 @@ name: Sync CleanURLs rules
 on:
   schedule:
     # Refresh the rules shortly after the upstream project sync runs.
-    - cron: "47 3 * * *"
+    - cron: "47 3 * * 1"
   workflow_dispatch:
 
 permissions:
