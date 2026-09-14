@@ -44,6 +44,8 @@ import fe.linksheet.activity.bottomsheet.LaunchHandler
 import fe.linksheet.activity.bottomsheet.LaunchResult
 import fe.linksheet.activity.bottomsheet.ManualDownloadInteraction
 import fe.linksheet.activity.bottomsheet.ManualRedirectInteraction
+import fe.linksheet.activity.bottomsheet.RemoveTrackingParametersInteraction
+import fe.linksheet.activity.bottomsheet.content.success.url.LinkParameterDialog
 import fe.linksheet.activity.bottomsheet.ShareUrlInteraction
 import fe.linksheet.activity.bottomsheet.StartDownloadInteraction
 import fe.linksheet.activity.bottomsheet.SwitchProfileInteraction
@@ -279,6 +281,23 @@ class BottomSheetActivity : BaseComponentActivity(), KoinComponent {
                 val downloaderEnable by viewModel.downloaderEnabled.collectAsStateWithLifecycle()
                 val downloaderMode by viewModel.downloaderMode.collectAsStateWithLifecycle()
                 val doubleTapUrl by viewModel.doubleTapUrl.collectAsStateWithLifecycle()
+                val openWithoutTrackingButton by viewModel.openWithoutTrackingButton.collectAsStateWithLifecycle()
+                val trackingParametersRemoved by viewModel.trackingParametersRemoved.collectAsStateWithLifecycle()
+
+                val selectLinkParameters by viewModel.selectLinkParameters.collectAsStateWithLifecycle()
+                val parameterSelection by viewModel.parameterSelection.collectAsStateWithLifecycle()
+                val parameterDraft by viewModel.parameterDraft.collectAsStateWithLifecycle()
+                if (selectLinkParameters) {
+                    parameterDraft?.let { draft ->
+                        LinkParameterDialog(
+                            state = draft,
+                            onToggle = viewModel::selectParameter,
+                            onSelectAll = viewModel::selectAllParameters,
+                            onApply = viewModel::applyParameterSelection,
+                            onDismiss = viewModel::dismissParameterSelection,
+                        )
+                    }
+                }
 
                 BottomSheetApps(
                     modifier = modifier,
@@ -289,6 +308,7 @@ class BottomSheetActivity : BaseComponentActivity(), KoinComponent {
                     profiles = if (bottomSheetProfileSwitcher) viewModel.profileSwitcher.getProfiles() else null,
                     enableManualRedirect = followRedirectsEnabled && followRedirectsMode == FollowRedirectsMode.Manual,
                     enableManualDownload = downloaderEnable && downloaderMode == DownloaderMode.Manual,
+                    enableRemoveTrackingParameters = openWithoutTrackingButton,
                     bottomSheetNativeLabel = bottomSheetNativeLabel,
                     gridLayout = gridLayout,
                     appListSelectedIdx = viewModel.appListSelectedIdx.intValue,
@@ -297,7 +317,9 @@ class BottomSheetActivity : BaseComponentActivity(), KoinComponent {
                     showPackage = alwaysShowPackageName,
                     previewUrl = previewUrl,
                     hideBottomSheetChoiceButtons = hideBottomSheetChoiceButtons,
-                    urlCardDoubleTap = doubleTapUrl
+                    urlCardDoubleTap = doubleTapUrl,
+                    displayUri = viewModel.displayUri(resolveResult, parameterSelection, trackingParametersRemoved),
+                    onSelectParameters = if (selectLinkParameters) viewModel::showParameterSelection else null,
                 )
             }
 
@@ -372,6 +394,10 @@ class BottomSheetActivity : BaseComponentActivity(), KoinComponent {
                     }
                 )
                 onNewIntent(intent)
+            }
+
+            is RemoveTrackingParametersInteraction -> {
+                viewModel.removeTrackingParameters()
             }
 
             is CopyUrlInteraction -> {
