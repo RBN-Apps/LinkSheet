@@ -318,6 +318,9 @@ fun JobBuilder<*>.setupAndroid() {
             actionOwner = "android-actions",
             actionName = "setup-android",
             actionVersion = "v3",
+            inputs = mapOf(
+                "packages" to "platform-tools"
+            )
         )
     )
     uses(action = ActionsSetupGradle())
