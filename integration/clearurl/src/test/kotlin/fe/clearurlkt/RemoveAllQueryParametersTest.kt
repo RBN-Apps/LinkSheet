@@ -4,11 +4,12 @@ import fe.clearurlskt.ClearUrls
 import fe.clearurlskt.Modification
 import fe.clearurlskt.loader.BundledClearURLConfigLoader
 import fe.clearurlskt.provider.Provider
+import fe.std.result.getOrNull
 import kotlin.test.Test
 import kotlin.test.assertEquals
 
 internal class RemoveAllQueryParametersTest {
-    private val cleaner = ClearUrls(BundledClearURLConfigLoader.load().getOrThrow()!!)
+    private val cleaner = ClearUrls(BundledClearURLConfigLoader.load().getOrNull()!!)
     private val instagram = setOf("instagram")
 
     @Test

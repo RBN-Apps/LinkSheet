@@ -13,6 +13,7 @@ import app.linksheet.feature.app.core.domain.VerificationBrowserState
 import app.linksheet.feature.app.core.domain.VerificationState
 import app.linksheet.feature.app.core.domain.VerificationStateCompat
 import fe.composekit.flag.ApplicationInfoFlags
+import fe.composekit.flag.PackageInfoFlags
 import fe.std.coroutines.BaseRefreshableFlow
 import fe.std.coroutines.RefreshableStateFlow
 import kotlinx.coroutines.flow.Flow
@@ -23,7 +24,7 @@ class DomainVerificationUseCase(
     private val domainVerificationManager: DomainVerificationManagerCompat,
     private val packageIntentHandler: PackageIntentHandler,
     private val getApplicationInfoOrNull: (String, ApplicationInfoFlags) -> ApplicationInfo?,
-    private val getInstalledPackages: () -> List<PackageInfo>,
+    private val getInstalledPackages: (PackageInfoFlags) -> List<PackageInfo>,
 ) {
     fun getVerificationState(applicationInfo: ApplicationInfo): VerificationStateCompat? {
         // TODO: There should be some sort of hybrid state which allows checking the domain verification status of browsers
@@ -34,17 +35,17 @@ class DomainVerificationUseCase(
         return domainVerificationManager.getDomainVerificationUserState(applicationInfo.packageName)
     }
 
-    fun getDomainVerificationAppInfoList() = getInstalledPackages().mapNotNull { packageInfo ->
+    fun getDomainVerificationAppInfoList() = getInstalledPackages(PackageInfoFlags.EMPTY).mapNotNull { packageInfo ->
         createDomainVerificationAppInfo(packageInfo)
     }
     fun getDomainVerificationAppInfoListRefreshableFlow(): BaseRefreshableFlow<List<DomainVerificationAppInfo>?> {
         return RefreshableStateFlow(null) {
-            getInstalledPackages().mapNotNull { createDomainVerificationAppInfo(it) }
+            getInstalledPackages(PackageInfoFlags.EMPTY).mapNotNull { createDomainVerificationAppInfo(it) }
         }
     }
 
     fun getDomainVerificationAppInfoListFlow(): Flow<List<DomainVerificationAppInfo>> = flow {
-        val packages = getInstalledPackages().mapNotNull { packageInfo ->
+        val packages = getInstalledPackages(PackageInfoFlags.EMPTY).mapNotNull { packageInfo ->
             createDomainVerificationAppInfo(packageInfo)
         }
 

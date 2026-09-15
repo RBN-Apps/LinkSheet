@@ -9,14 +9,14 @@ import android.content.pm.resolveActivityCompat
 import android.net.Uri
 import androidx.annotation.VisibleForTesting
 import app.linksheet.feature.app.extension.activityDescriptor
-import app.linksheet.lib.flavors.LinkSheetApp
+import app.linksheet.lib.flavors.BaseLinkSheetApp
 import fe.composekit.extension.packageName
 import fe.composekit.flag.ResolveInfoFlags
 
 interface PackageIntentHandler {
     fun isSelfDefaultBrowser(): Boolean
     fun findHttpBrowsable(packageName: String?): List<ResolveInfo>
-    fun findSupportedHosts(packageName: String): Set<String>
+//    fun findSupportedHosts(packageName: String): Set<String>
     fun findHandlers(intent: Intent): List<ResolveInfo>
     fun findHandlers(uri: Uri, referringPackage: String?): List<ResolveInfo>
     fun isLinkHandler(filter: IntentFilter, uri: Uri): Boolean
@@ -27,7 +27,7 @@ fun DefaultPackageIntentHandler(context: Context, applicationId: String): Packag
     return DefaultPackageIntentHandler(
         queryIntentActivities = pm::queryIntentActivitiesCompat,
         resolveActivity = pm::resolveActivityCompat,
-        isLinkSheetCompat = { LinkSheetApp.Compat.isApp(it) != null },
+        isLinkSheetCompat = { BaseLinkSheetApp.Compat.isApp(it) != null },
         isSelf = { applicationId == it },
     )
 }
@@ -77,18 +77,18 @@ internal class DefaultPackageIntentHandler(
             .filter { !isSelf(it.packageName) }
     }
 
-    override fun findSupportedHosts(packageName: String): Set<String> {
-        val httpIntent = Intent(Intent.ACTION_VIEW, httpSchemeUri)
-            .addCategory(Intent.CATEGORY_BROWSABLE)
-            .setPackage(packageName)
-
-        val httpInfos = queryIntentActivities(httpIntent, ResolveInfoFlags.MATCH_ALL)
-        val httpsInfos = queryIntentActivities(httpIntent.setData(httpsSchemeUri), ResolveInfoFlags.MATCH_ALL)
-
-        return (httpInfos + httpsInfos)
-            .filter { it.filter != null }
-            .flatMapTo(HashSet()) { it.filter.getHosts() }
-    }
+//    override fun findSupportedHosts(packageName: String): Set<String> {
+//        val httpIntent = Intent(Intent.ACTION_VIEW, httpSchemeUri)
+//            .addCategory(Intent.CATEGORY_BROWSABLE)
+//            .setPackage(packageName)
+//
+//        val httpInfos = queryIntentActivities(httpIntent, ResolveInfoFlags.MATCH_ALL)
+//        val httpsInfos = queryIntentActivities(httpIntent.setData(httpsSchemeUri), ResolveInfoFlags.MATCH_ALL)
+//
+//        return (httpInfos + httpsInfos)
+//            .filter { it.filter != null }
+//            .flatMapTo(HashSet()) { it.filter.getHosts() }
+//    }
 
     override fun findHandlers(intent: Intent): List<ResolveInfo> {
         val activities = queryIntentActivities(intent, QUERY_FLAGS)

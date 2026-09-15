@@ -12,18 +12,22 @@ abstract class UpdateRulesTask : DefaultTask() {
     @get:Input
     abstract val file: Property<String>
 
-    @Input
-    val rawUrl: String =
-        "https://raw.githubusercontent.com/RBN-Apps/CleanURLs-Rules/refs/heads/master/data.min.json"
+    @get:Input
+    abstract val rawUrl: Property<String>
+
+    init {
+        rawUrl.convention("https://raw.githubusercontent.com/ClearURLs/Rules/master/data.min.json")
+    }
 
     @TaskAction
     fun fetch() {
         val jsonFile = project.file(file.get())
 
-        val response = httpClient.send(get(rawUrl), asString)
+        val rulesUrl = rawUrl.get()
+        val response = httpClient.send(get(rulesUrl), asString)
 
         check(response.statusCode() in 200..299) {
-            "Unable to download ClearURLs rules: HTTP ${response.statusCode()} from $rawUrl"
+            "Unable to download ClearURLs rules: HTTP ${response.statusCode()} from $rulesUrl"
         }
 
         jsonFile.writeText(response.body())
