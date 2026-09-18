@@ -27,9 +27,7 @@ jobs:
         distribution: 'zulu'
         cache: 'gradle'
     - id: 'step-2'
-      uses: 'android-actions/setup-android@v3'
-      with:
-        packages: 'platform-tools'
+      uses: 'android-actions/setup-android@v4.0.4'
     - id: 'step-3'
       uses: 'gradle/actions/setup-gradle@v3'
     - id: 'step-4'
@@ -58,9 +56,7 @@ jobs:
         distribution: 'zulu'
         cache: 'gradle'
     - id: 'step-3'
-      uses: 'android-actions/setup-android@v3'
-      with:
-        packages: 'platform-tools'
+      uses: 'android-actions/setup-android@v4.0.4'
     - id: 'step-4'
       uses: 'gradle/actions/setup-gradle@v3'
     - id: 'step-5'
@@ -98,9 +94,7 @@ jobs:
         distribution: 'zulu'
         cache: 'gradle'
     - id: 'step-3'
-      uses: 'android-actions/setup-android@v3'
-      with:
-        packages: 'platform-tools'
+      uses: 'android-actions/setup-android@v4.0.4'
     - id: 'step-4'
       uses: 'gradle/actions/setup-gradle@v3'
     - id: 'step-5'
