@@ -6,8 +6,8 @@ import com.gitlab.grrfe.gradlebuild.android.ArchiveBaseName
 import com.gitlab.grrfe.gradlebuild.android.extension.buildConfig
 import com.gitlab.grrfe.gradlebuild.android.extension.buildStringConfigField
 import com.gitlab.grrfe.gradlebuild.android.version.DefaultFallbackVersionCodeProducer
+import com.gitlab.grrfe.gradlebuild.android.version.NightlyTagVersionCodeProducer
 import com.gitlab.grrfe.gradlebuild.android.version.SemverProducer
-import com.gitlab.grrfe.gradlebuild.android.version.VersionCodeProducer
 import com.gitlab.grrfe.gradlebuild.android.version.createAndroidVersionProvider
 import com.gitlab.grrfe.gradlebuild.common.CompilerOption
 import com.gitlab.grrfe.gradlebuild.common.KotlinCompilerArgs
@@ -21,8 +21,6 @@ import com.gitlab.grrfe.gradlebuild.util.withProviders
 import fe.build.dependencies.Grrfe
 import fe.build.dependencies._1fexd
 import fe.buildsrc.LocaleConfigTask
-import java.time.LocalDate
-import java.time.format.DateTimeFormatter
 
 plugins {
     kotlin("plugin.compose")
@@ -45,26 +43,10 @@ val localProviders = withProviders(localProperties, SystemEnvironment)
 val publicLocalProviders = withProviders(publicLocalProperties, SystemEnvironment)
 val supportedLocales = publicLocalProviders.get("SUPPORTED_LOCALES")?.split(",") ?: emptyList()
 
-object NightlyTagVersionCodeProducer : VersionCodeProducer {
-    private fun readResolve(): Any = NightlyTagVersionCodeProducer
-    private val DTF: DateTimeFormatter = DateTimeFormatter.ofPattern("yyyyMMdd")
-    private val NIGHTLY_TAG_REGEX = Regex("^nightly-(\\d{4})(\\d{2})(\\d{2})(\\d{2})$")
-
-    override fun produceVersionCode(tag: String): Int? {
-        println("Handling nightly tag $tag")
-        val match = NIGHTLY_TAG_REGEX.matchEntire(tag)?.groupValues ?: return null
-
-        val (_, year, month, day, buildNum) = match
-        val date = LocalDate.of(year.toInt(), month.toInt(), day.toInt())
-        val dateStr = date.format(DTF) + buildNum.padStart(1, '0')
-
-        return dateStr.toIntOrNull()
-    }
-}
-
 android {
     namespace = "fe.linksheet"
     compileSdk = app.linksheet.buildsrc.Sdk.CompileSdk
+    compileSdkMinor = 2
 
     defaultConfig {
         applicationId = "fe.linksheet"
@@ -440,7 +422,7 @@ dependencies {
     implementation("app.cash.zipline:zipline-loader-android:_")
 
     implementation("me.saket.unfurl:unfurl:_")
-    implementation("com.github.nanihadesuka:LazyColumnScrollbar:_")
+    implementation("com.github.nanihadesuka.LazyColumnScrollbar:lazycolumnscrollbar:_")
 
     implementation("org.jsoup:jsoup:_")
 
