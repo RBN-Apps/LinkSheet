@@ -7,6 +7,7 @@ import fe.clearurlskt.util.keyValueMapToString
 import fe.clearurlskt.util.toFragmentMap
 import fe.relocated.org.apache.hc.core5.core5.net.PercentCodec
 import fe.std.result.isFailure
+import fe.std.result.getOrNull
 import fe.std.uri.EncodingPolicy
 import fe.std.uri.StdUrl
 import fe.std.uri.StdUrlFactory
@@ -143,11 +144,29 @@ public class ClearUrls(
         return mutUrl
     }
 
-    public fun clearUrl(url: String): Pair<String, List<ClearUrlOperation>> {
+    /**
+     * Applies the bundled rules, then removes the entire query for selected provider keys
+     * matching the resulting URL. This explicit override also applies to rule exceptions;
+     * it does not remove the fragment or propagate to unrelated redirect destinations.
+     */
+    public fun clearUrl(url: String, removeAllQueryProviders: Set<String> = emptySet()): Pair<String, List<ClearUrlOperation>> {
         var result = url
-        val operations = sequence<ClearUrlOperation> { result = clearUrl(url) }.toList()
+        val operations = sequence<ClearUrlOperation> {
+            result = clearUrl(url)
+            // Match the final destination, so redirect parameters are resolved before removal.
+            val provider = providers.firstOrNull {
+                it.key in removeAllQueryProviders && it.url.containsMatchIn(result)
+            } ?: return@sequence
+
+            val input = result
+            val stripped = removeAllQueryParameters(input)
+            if (stripped == input) return@sequence
+
+            val fields = StdUrlFactory.parse(input, encodingPolicy = EncodingPolicy.RFC_3986)
+                .getOrNull()?.queryParams?.mapTo(mutableSetOf()) { it.first } ?: mutableSetOf()
+            result = stripped
+            yield(ParameterRemoval(provider.key, input, result, fields, mutableSetOf()))
+        }.toList()
         return result to operations
     }
 }
-
-
