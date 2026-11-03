@@ -46,6 +46,7 @@ import fe.linksheet.activity.bottomsheet.ShareUrlInteraction
 import fe.linksheet.activity.bottomsheet.StartDownloadInteraction
 import fe.linksheet.activity.bottomsheet.SwitchProfileInteraction
 import fe.linksheet.activity.bottomsheet.OpenExternallyInteraction
+import fe.linksheet.activity.bottomsheet.hideAndFinish
 import fe.linksheet.activity.bottomsheet.compat.SettingsObserver
 import fe.linksheet.activity.bottomsheet.compat.m3fix.M3FixModalBottomSheet
 import fe.linksheet.activity.bottomsheet.compat.m3fix.rememberM3FixModalBottomSheetState
