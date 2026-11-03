@@ -2,9 +2,9 @@
 
 package fe.linksheet.module.preference.state
 
+import app.linksheet.api.preference.AppPreferenceRepository
 import fe.android.preference.helper.Preference
 import fe.android.preference.helper.UnsafePreferenceInteraction
-import app.linksheet.api.preference.AppPreferenceRepository
 import fe.linksheet.module.preference.app.AppPreferences
 import fe.linksheet.module.preference.experiment.ExperimentRepository
 import fe.linksheet.module.preference.experiment.Experiments
@@ -48,7 +48,7 @@ class NewDefaults20251215(private val preferenceRepository: AppPreferenceReposit
 
     override fun execute(experimentsRepository: ExperimentRepository) {
         migrate(experimentsRepository, preferenceRepository, hideReferrerFromSheet, AppPreferences.bottomSheet.hideReferringApp)
-        migrate(experimentsRepository, preferenceRepository, doubleTap, AppPreferences.bottomSheet.doubleTapUrl)
+        migrate(experimentsRepository, preferenceRepository, doubleTap, AppPreferences.bottomSheet.actionBar.doubleTapUrl)
         migrate(experimentsRepository, preferenceRepository, expandFully, AppPreferences.bottomSheet.expandFully)
         migrate(experimentsRepository, preferenceRepository, autoLaunchSingleBrowser, AppPreferences.browserMode.autoLaunchSingleBrowser)
         if (experimentsRepository.hasStoredValue(manualFollowRedirects)) {
@@ -64,6 +64,15 @@ class NewDefaults20251215(private val preferenceRepository: AppPreferenceReposit
 object NewDefaults20260427 : AppStateUpdate {
     override fun execute(experimentsRepository: ExperimentRepository) {
         experimentsRepository.put(Experiments.newVlh, false)
+    }
+}
+
+
+class NewDefaults20261029(private val preferenceRepository: AppPreferenceRepository) : AppStateUpdate {
+    private val disableLogging = "experiment_disable_log_persistence"
+
+    override fun execute(experimentsRepository: ExperimentRepository) {
+        migrate(experimentsRepository, preferenceRepository, disableLogging, AppPreferences.privacy.incognito.disableLogsPersistence)
     }
 }
 

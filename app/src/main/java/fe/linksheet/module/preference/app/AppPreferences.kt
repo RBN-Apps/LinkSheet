@@ -12,12 +12,13 @@ import app.linksheet.feature.profile.preference.profilePreferences
 import app.linksheet.feature.remoteconfig.preference.remoteConfigPreferences
 import app.linksheet.feature.remoteconfig.preference.jsonMapped
 import app.linksheet.feature.shizuku.preference.shizukuPreferences
+import app.linksheet.module.preference.app.PrivacyPreferences
 import com.google.gson.JsonArray
 import fe.android.preference.helper.UnsafePreferenceInteraction
 import fe.gson.dsl.jsonObject
 import fe.gson.util.jsonArrayItems
 import fe.linksheet.module.preference.LinkSheetPreferenceDefinition
-import java.util.UUID
+import java.util.*
 
 object AppPreferences : LinkSheetPreferenceDefinition(
     "enable_copy_button",
@@ -44,7 +45,6 @@ object AppPreferences : LinkSheetPreferenceDefinition(
     @SensitivePreference
     val useTimeMs = long("use_time", 0)
 
-    val showLinkSheetAsReferrer = boolean("show_as_referrer")
     val devModeEnabled = boolean("dev_mode_enabled")
     val firstRun = boolean("first_run", true)
 
@@ -60,7 +60,6 @@ object AppPreferences : LinkSheetPreferenceDefinition(
 //    val lastVersionsV1 = jsonMapped<LastVersion?>("last_versions", null)
 
     val homeClipboardCard = boolean("home_clipboard_card", true)
-    val previewUrl = boolean("preview_url", true)
 
     val browserMode = BrowserMode(registry)
     val bottomSheet = BottomSheet(registry)
@@ -76,6 +75,7 @@ object AppPreferences : LinkSheetPreferenceDefinition(
     val profileSwitcher = profilePreferences(registry)
     val analytics = analyticsPreferences(registry)
     val remoteConfig = remoteConfigPreferences(registry)
+    val privacy = PrivacyPreferences(registry)
 
     init {
         migrate("theme") { repository ->

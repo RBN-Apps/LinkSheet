@@ -57,6 +57,7 @@ fun BottomSheetApps(
     imageLoader: ImageLoader?,
     enableDownloader: Boolean,
     enableIgnoreLibRedirectButton: Boolean,
+    enableOpenExternallyButton: Boolean,
     enableManualRedirect: Boolean,
     enableManualDownload: Boolean,
     enableRemoveTrackingParameters: Boolean,
@@ -66,7 +67,7 @@ fun BottomSheetApps(
     isPrivateBrowser: suspend (Boolean, ActivityAppInfo) -> Browser?,
     controller: BottomSheetStateController,
     showPackage: Boolean,
-    previewUrl: Boolean,
+    enableActionBar: Boolean,
     hideBottomSheetChoiceButtons: Boolean,
     urlCardDoubleTap: Boolean,
     profiles: List<CrossProfile>?,
@@ -81,7 +82,7 @@ fun BottomSheetApps(
         modifier = modifier,
         verticalArrangement = Arrangement.spacedBy(10.dp)
     ) {
-        if (previewUrl && hasUri) {
+        if (enableActionBar && hasUri) {
             Column(
                 modifier = Modifier
                     .padding(horizontal = 15.dp)
@@ -97,6 +98,7 @@ fun BottomSheetApps(
                     onSelectParameters = onSelectParameters,
                     enableDownloader = enableDownloader,
                     enableIgnoreLibRedirectButton = enableIgnoreLibRedirectButton,
+                    enableOpenExternallyButton = enableOpenExternallyButton,
                     profiles = profiles,
                     enableUrlCardDoubleTap = urlCardDoubleTap,
                     enableManualRedirect = enableManualRedirect,
@@ -332,6 +334,7 @@ private fun BottomSheetAppsBasePreview(state: PreviewState, gridLayout: Boolean)
             imageLoader = null,
             enableDownloader = false,
             enableIgnoreLibRedirectButton = false,
+            enableOpenExternallyButton = false,
             enableManualRedirect = false,
             enableManualDownload = false,
             enableRemoveTrackingParameters = false,
@@ -341,7 +344,7 @@ private fun BottomSheetAppsBasePreview(state: PreviewState, gridLayout: Boolean)
             isPrivateBrowser = { hasUri, info -> null },
             controller = BottomSheetStateControllerStub,
             showPackage = false,
-            previewUrl = true,
+            enableActionBar = true,
             hideBottomSheetChoiceButtons = state.hideBottomSheetChoiceButtons,
             urlCardDoubleTap = false,
             profiles = null

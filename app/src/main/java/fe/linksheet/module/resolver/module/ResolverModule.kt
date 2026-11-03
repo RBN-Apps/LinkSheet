@@ -18,18 +18,12 @@ import fe.linksheet.module.preference.experiment.ExperimentRepository
 import fe.linksheet.module.preference.experiment.Experiments
 import fe.linksheet.module.repository.whitelisted.WhitelistedInAppBrowsersRepository
 import fe.linksheet.module.repository.whitelisted.WhitelistedNormalBrowsersRepository
-import fe.linksheet.module.resolver.FollowRedirectsMode
-import fe.linksheet.module.resolver.ImprovedBrowserHandler
-import fe.linksheet.module.resolver.ImprovedIntentResolver
-import fe.linksheet.module.resolver.InAppBrowserHandler
-import fe.linksheet.module.resolver.IntentResolver
-import fe.linksheet.module.resolver.IntentResolverDelegate
+import fe.linksheet.module.resolver.*
 import fe.linksheet.module.resolver.browser.BrowserMode
 import fe.linksheet.module.resolver.util.AppSorter
 import fe.linksheet.module.resolver.util.DefaultIntentLauncher
 import fe.linksheet.module.resolver.util.IntentLauncher
 import kotlinx.coroutines.flow.firstOrNull
-import org.koin.core.module.dsl.singleOf
 import org.koin.dsl.module
 import kotlin.time.ExperimentalTime
 
@@ -48,11 +42,13 @@ val ResolverModule = module {
         val appPreferenceRepository = get<AppPreferenceRepository>()
         DefaultIntentLauncher(
             getComponentEnabledSetting = getPackageManager()::getComponentEnabledSetting,
-            showAsReferrer = appPreferenceRepository.asFunction(AppPreferences.showLinkSheetAsReferrer),
+            showAsReferrer = appPreferenceRepository.asFunction(AppPreferences.privacy.showLinkSheetAsReferrer),
             selfPackage = BuildConfig.APPLICATION_ID
         )
     }
-    singleOf(::InAppBrowserHandler)
+    single<InAppBrowserHandler> {
+        InAppBrowserHandler(repository = get())
+    }
     single<IntentResolver> {
         val settings = createSettings(get(), get(), get(), get())
         val experimentRepository = get<ExperimentRepository>()
@@ -103,6 +99,7 @@ val ResolverModule = module {
 data class IntentResolverSettings(
     val useClearUrls: () -> Boolean,
     val clearUrlsRemoveAllQueryProviders: () -> Set<String>,
+    val clearUrlsSkipUnchanged: () -> Boolean,
     val useFastForwardRules: () -> Boolean,
     val requestTimeout: () -> Int,
     val resolveEmbeds: () -> Boolean,
@@ -113,6 +110,7 @@ data class IntentResolverSettings(
     val followRedirectsSettings: FollowRedirectsSettings,
     val downloaderSettings: DownloaderSettings,
     val previewSettings: PreviewSettings,
+    val parseTextUrlsToHttps: () -> Boolean
 )
 
 data class BottomSheetSettings(
@@ -232,5 +230,7 @@ fun createSettings(
             previewUrl = prefRepo.asFunction(AppPreferences.bottomSheet.openGraphPreview.enable),
             previewUrlSkipBrowser = prefRepo.asFunction(AppPreferences.bottomSheet.openGraphPreview.skipBrowser),
         ),
+        parseTextUrlsToHttps = experimentRepository.asFunction(Experiments.parseTextUrlsToHttps),
+        clearUrlsSkipUnchanged = experimentRepository.asFunction(Experiments.clearUrlsSkipUnchanged),
     )
 }

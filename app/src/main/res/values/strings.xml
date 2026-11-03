@@ -72,7 +72,7 @@
     <string name="open_copied_link">From clipboard</string>
     <string name="paste">Paste</string>
     <string name="links">Links</string>
-    <string name="links_explainer">ClearUrls, LibRedirect, Redirect following</string>
+    <string name="links_explainer">ClearURLs, LibRedirect, Redirect following</string>
     <string name="use_clear_urls">Use ClearURLs</string>
     <string name="use_clear_urls_explainer">Use experimental <annotation url-id="clearurls-github">ClearURLs</annotation> integration (clears tracking parameters from URLs)</string>
     <string name="follow_redirects">Follow redirects</string>
@@ -118,7 +118,7 @@
     <string name="in_app">In-App</string>
     <string name="use_unified_preferred_browser">Use unified settings</string>
     <string name="enable_ignore_libredirect_button">Enable \"Ignore LibRedirect\" button</string>
-    <string name="enable_ignore_libredirect_button_explainer">Shows a button in the bottom sheet if the URL has been redirected via LibRedirect, which opens the original URL instead</string>
+    <string name="enable_ignore_libredirect_button_explainer">Show a button in the bottom sheet if the URL has been redirected via LibRedirect, which opens the original URL instead</string>
     <string name="ignore_libredirect">Ignore LibRedirect</string>
     <string name="copy_to_clipboard">Copy to clipboard</string>
     <string name="debug">Debug</string>
@@ -195,7 +195,7 @@
     <string name="privacy">Privacy</string>
     <string name="show_linksheet_referrer">Show LinkSheet referrer</string>
     <string name="show_linksheet_referrer_explainer">When an app is launched, it can check to see which app launched, or \"referred\" to it. By default, when LinkSheet launches an app, it hides itself, saying that the app that launched LinkSheet is the launched target. Enable this to reinsert LinkSheet as the referrer for apps it opens.</string>
-    <string name="privacy_settings_explainer">Referrer privacy</string>
+    <string name="privacy_settings_explainer">Referrer privacy, Incognito-Mode, Remote config</string>
     <string name="thanks_for_donating">Thank you for donating!</string>
     <string name="discord">Discord</string>
     <string name="discord_explainer">Chat about LinkSheet on Discord</string>
@@ -294,7 +294,7 @@
     <string name="hide_bottom_sheet_choice_buttons">Hide choice buttons</string>
     <string name="hide_bottom_sheet_choice_buttons_explainer">Hide the \"Once\" and \"Always\" buttons in the bottom sheet</string>
     <string name="base_config">Additional configuration</string>
-    <string name="urlbar_settings">Url-bar</string>
+    <string name="urlbar_settings">URL-bar</string>
     <string name="permission_required">Permission required</string>
     <string name="permission_required_explainer">Some imported preferences require permissions that are currently not given to LinkSheet. Tap below to request them.</string>
     <string name="allow_darknets">Allow darknets</string>
@@ -393,7 +393,7 @@
     <string name="bottom_sheet_loading_indicator__button_skip_job">Skip</string>
     <string name="export_log_dialog__title_share_logs">Share log</string>
     <string name="export_log_dialog__title_redact_log">Redact log</string>
-    <string name="export_log_dialog__subtitle_redact_log">Recommended, redacts app names and urls</string>
+    <string name="export_log_dialog__subtitle_redact_log">Recommended, redacts app names and URLs</string>
     <string name="export_log_dialog__title_include_throwable">Include crash logs</string>
     <string name="export_log_dialog__subtitle_include_throwable">Recommended, but can not be redacted</string>
     <string name="export_log_dialog__title_include_fingerprint">Include build fingerprint</string>
@@ -450,7 +450,6 @@
     <string name="settings_app_config_rules__text_custom_rules">Custom rules</string>
     <string name="delete_log_dialog__title_delete_log">Delete session?</string>
     <string name="delete_log_dialog__subtitle_delete_info">Do you want to delete this log session? This can not be undone!</string>
-    <string name="generic__button_text_delete">Delete</string>
     <string name="generic__text_edit">Edit</string>
     <string name="generic__button_text_done">Done</string>
     <string name="home__clipboard_card_source">From clipboard</string>
@@ -468,6 +467,7 @@
     <string name="settings_main_experiment_changelog__title_changelog">Experiments changelog</string>
     <string name="settings__subtitle_advanced"><![CDATA[Experiments, Backup & Restore]]></string>
     <string name="bottom_sheet__button_manual_redirect">Follow redirects</string>
+    <string name="bottom_sheet__button_open_externally">Open externally</string>
     <string name="app_host_dialog__title_hosts">Default hosts</string>
     <string name="generic__button_text_save">Save</string>
     <string name="app_host_dialog__text_no_hosts">No hosts have been set to open by default in this app!</string>
@@ -476,7 +476,7 @@
     <string name="generic__button_text_share">Share</string>
     <string name="resolve_event__idle">Idle</string>
     <string name="settings_home__title_clipboard_card">Clipboard card</string>
-    <string name="settings_home__text_clipboard_card">Show the current clipboard content on the home page if it is a url</string>
+    <string name="settings_home__text_clipboard_card">Show the current clipboard content on the home page if it is a URL</string>
     <plurals name="settings_verified_link_handlers__text_app_host_default_host">
         <item quantity="one">%d default host</item>
         <item quantity="other">%d default hosts</item>
@@ -511,8 +511,8 @@
     <string name="settings_links_amp2html__text_local_network">Allow running Amp2Html for non-public hosts</string>
     <string name="settings_links_follow_redirects__title_local_network">Allow local network</string>
     <string name="settings_links_follow_redirects__text_local_network">Allow following redirects for non-public hosts</string>
-    <string name="settings_links_preview__title_preview">Show url preview</string>
-    <string name="settings_links_preview__subtitle_preview">Attempt to load and show OpenGraph preview in bottom sheet. This may have <annotation url-id="github.linksheet.wiki.privacy.preview">privacy-related implications</annotation></string>
+    <string name="settings_links_preview__title_preview">Show URL preview</string>
+    <string name="settings_links_preview__subtitle_preview">Attempt to load and show the URL\'s OpenGraph preview. This may have <annotation url-id="github.linksheet.wiki.privacy.preview">privacy-related implications</annotation></string>
     <string name="settings_links_preview__title_preview_skip_browser">Disable browser preview</string>
     <string name="settings_links_preview__subtitle_preview_skip_browser">Disable preview if referrer is browser</string>
     <string name="settings_scenario__title_scenarios">Scenarios</string>
@@ -532,8 +532,8 @@
     <string name="notification_interconnect_description">Interconnect is active</string>
     <string name="settings_bottom_sheet__title_hide_referring_app">Hide referring app</string>
     <string name="settings_bottom_sheet__subtitle_hide_referring_app">Don\'t list referring/source app, even if it can handle link</string>
-    <string name="settings_bottom_sheet__title_double_tap_url">Double-tap url</string>
-    <string name="settings_bottom_sheet__subtitle_double_tap_url">Open suggested app when url is double-tapped</string>
+    <string name="settings_bottom_sheet__title_double_tap_url">Double-tap to open</string>
+    <string name="settings_bottom_sheet__subtitle_double_tap_url">Open suggested app when URL is double-tapped</string>
     <string name="settings_bottom_sheet__title_expand_fully">Expand fully</string>
     <string name="settings_bottom_sheet__subtitle_expand_fully">Auto-expand bottom sheet to its full height</string>
     <string name="settings_browser_mode__title_auto_launch_single_browser">Auto launch single browser</string>
@@ -560,4 +560,26 @@
     <string name="link_parameters_deselect_all">Deselect all</string>
     <string name="link_parameters_apply">Apply</string>
     <string name="link_parameters_empty">This link has no query parameters.</string>
+    <string name="qs_tile_label">Open copied link</string>
+    <string name="qs_tile_no_link">No link in clipboard!</string>
+    <string name="qs_tile_failed_to_parse_links">Clipboard content could not be parsed!</string>
+    <string name="settings_bottom_sheet__title_enable_open_externally_button">Enable \"Open externally\" button</string>
+    <string name="settings_bottom_sheet__subtitle_enable_open_externally_button">Show a button in the bottom sheet if the source app requests the URL to be opened in-app which allows the user to open it externally instead</string>
+    <string name="settings_bottom_sheet_action_bar__title_action_bar">Bottom sheet action bar</string>
+    <string name="settings_bottom_sheet_action_bar__title_enable_action_bar">Enable action bar</string>
+    <string name="settings_bottom_sheet_action_bar__subtitle_enable_action_bar">Display an URL- and action-bar at the top of the bottom sheet</string>
+    <string name="settings_bottom_sheet_action_bar__divider_actions">Actions</string>
+    <string name="settings_privacy_incognito__title_incognito">Incognito-Mode</string>
+    <string name="settings_privacy_incognito__title_enable_incognito">Incognito-Mode</string>
+    <string name="settings_privacy_incognito__subtitle_incognito">Disable storing any URL-related information</string>
+    <string name="settings_privacy_incognito__title_disable_logs">Disable logging</string>
+    <string name="settings_privacy_incognito__subtitle_disable_logs">Applies to both in-app logs and logcat</string>
+    <string name="settings_privacy_incognito__title_disable_log_persistence">Disable log persistence</string>
+    <string name="settings_privacy_incognito__subtitle_disable_log_persistence">Disable log file creation</string>
+    <string name="settings_privacy_incognito__text_info">Most users should <b>not</b> enable this feature, as it is intended for users with threat-models that need to defend against an attacker that is able to access the user\'s device in an unlocked state.\n\nIf enabled, LinkSheet will no longer store, and skip the import of,\n • the history of hosts and the apps used to open them, and\n • redirection/Amp2Html/preview results.\n\nOnly data on apps set to \"Always\" open a specific host is retained.\n\nThis feature acts as a \"killswitch\" and therefore overrides any other settings that enable/disable features like redirection caching.</string>
+    <string name="settings_privacy_incognito__title_stored_data">Stored data</string>
+    <string name="settings_privacy_incognito__subtitle_stored_data">History, preferred apps, cache, logs</string>
+    <string name="settings_privacy_incognito__toast_text_deleted">Data deleted</string>
+    <string name="settings_privacy_incognito_delete_dialog__title_delete_data">Delete data?</string>
+    <string name="settings_privacy_incognito_delete_dialog__subtitle_delete_data">This can not be undone!</string>
 </resources>

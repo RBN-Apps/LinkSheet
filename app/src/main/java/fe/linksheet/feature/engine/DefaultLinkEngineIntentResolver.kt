@@ -68,6 +68,7 @@ fun DefaultLinkEngineIntentResolver(
             ClearURLsLinkModifier(
                 enabled = settings.useClearUrls,
                 removeAllQueryProviders = settings.clearUrlsRemoveAllQueryProviders,
+                skipUnchanged = settings.clearUrlsSkipUnchanged,
                 ioDispatcher = dispatcher
             ),
             FollowRedirectsLinkResolver(

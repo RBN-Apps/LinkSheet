@@ -6,6 +6,7 @@ import app.linksheet.feature.engine.core.step.EngineStepId
 import app.linksheet.feature.engine.core.step.InPlaceStep
 import app.linksheet.feature.engine.core.step.StepResult
 import fe.clearurlskt.ClearUrlOperation
+import fe.clearurlskt.ClearUrlSettings
 import fe.clearurlskt.ClearUrls
 import fe.clearurlskt.loader.BundledClearURLConfigLoader
 import fe.std.result.getOrNull
@@ -19,6 +20,7 @@ class ClearURLsLinkModifier(
     private val ioDispatcher: CoroutineDispatcher = Dispatchers.IO,
     override val enabled: () -> Boolean,
     private val removeAllQueryProviders: () -> Set<String> = { emptySet() },
+    val skipUnchanged: () -> Boolean,
 ) : LinkModifier<ClearURLsModifyOutput>, InPlaceStep {
     override val id = EngineStepId.ClearURLs
 
@@ -38,8 +40,17 @@ class ClearURLsLinkModifier(
 
     context(context: EngineRunContext)
     override suspend fun runStep(url: StdUrl) = withContext(ioDispatcher) {
-        val result = clearUrls?.clearUrl(url.toString(), removeAllQueryProviders())
-        result?.let { (url, operations) -> ClearURLsModifyOutput(url.toStdUrlOrThrow(), operations) }
+        val result = clearUrls?.clearUrl(
+            url = url.toString(),
+            settings = ClearUrlSettings(skipUnchanged = skipUnchanged()),
+            removeAllQueryProviders = removeAllQueryProviders()
+        )
+        result?.let { (url, operations) ->
+            ClearURLsModifyOutput(
+                url.toStdUrlOrThrow(),
+                operations
+            )
+        }
     }
 }
 

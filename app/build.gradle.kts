@@ -12,12 +12,7 @@ import com.gitlab.grrfe.gradlebuild.android.version.createAndroidVersionProvider
 import com.gitlab.grrfe.gradlebuild.common.CompilerOption
 import com.gitlab.grrfe.gradlebuild.common.KotlinCompilerArgs
 import com.gitlab.grrfe.gradlebuild.common.PluginOption
-import com.gitlab.grrfe.gradlebuild.util.LocalPropertiesFile
-import com.gitlab.grrfe.gradlebuild.util.PropertiesFile
-import com.gitlab.grrfe.gradlebuild.util.PublicLocalPropertiesFile
-import com.gitlab.grrfe.gradlebuild.util.SystemEnvironment
-import com.gitlab.grrfe.gradlebuild.util.propertiesProvider
-import com.gitlab.grrfe.gradlebuild.util.withProviders
+import com.gitlab.grrfe.gradlebuild.util.*
 import fe.build.dependencies.Grrfe
 import fe.build.dependencies._1fexd
 import fe.buildsrc.LocaleConfigTask
@@ -33,6 +28,7 @@ plugins {
     id("dev.rikka.tools.refine")
     id("com.gitlab.grrfe.android-build-plugin")
     id("de.mannodermaus.android-junit")
+    id("de.infix.testBalloon")
 }
 
 val appName = "LinkSheet"
@@ -241,6 +237,21 @@ tasks.register<LocaleConfigTask>("createLocaleConfig") {
     outputFile.set(file("src/main/res/xml/locales_config.xml"))
 }
 
+// Via https://github.com/tyejaedon/TigerPlayer/pull/114:
+
+// Robolectric's FileDescriptorInterceptor reflectively reaches into the JDK-internal
+// jdk.internal.access.SharedSecrets class while shimming android.os.SharedMemory on JDK 17+.
+// That package isn't exported to unnamed modules by default, so every Robolectric test fails
+// during environment setup with "Failed to interact with raw FileDescriptor internals" unless
+// the test JVM explicitly opens it up. See issue #113 and robolectric/robolectric#11434.
+tasks.withType<Test>().configureEach {
+    jvmArgs(
+        "--add-exports=java.base/jdk.internal.access=ALL-UNNAMED",
+        "--add-opens=java.base/java.io=ALL-UNNAMED",
+        "--add-opens=java.base/java.lang=ALL-UNNAMED",
+    )
+}
+
 kotlin {
     jvmToolchain(Version.JVM)
 //    addCompilerOptions()
@@ -429,7 +440,7 @@ dependencies {
     implementation("dev.rikka.shizuku:api:_")
     implementation("dev.rikka.shizuku:provider:_")
     implementation("org.lsposed.hiddenapibypass:hiddenapibypass:_")
-    implementation("com.github.1fexd.HiddenApiRefinePlugin:runtime:4.4.1")
+    implementation("com.github.1fexd.HiddenApiRefinePlugin:runtime:_")
 
     implementation(KotlinX.serialization.json)
     implementation(KotlinX.serialization.json.okio)
@@ -451,7 +462,7 @@ dependencies {
         AndroidX.test.ext.junit.ktx,
         "com.willowtreeapps.assertk:assertk:_",
 //        AndroidX.test.espresso.core,
-        "io.mockk:mockk-android:1.14.9"
+        Testing.mockK.android
     )
 
     for (notation in commonTestDependencies) {
@@ -459,6 +470,8 @@ dependencies {
         testImplementation(notation)
     }
 
+    testImplementation("de.infix.testBalloon:testBalloon-framework-core:_")
+    testImplementation("de.infix.testBalloon:testBalloon-integration-robolectric:_")
     testImplementation(Testing.robolectric)
 
     testImplementation("org.mock-server:mockserver-client-java:_")
@@ -475,13 +488,13 @@ dependencies {
     androidTestImplementation(AndroidX.test.runner)
     androidTestImplementation(AndroidX.test.rules)
     androidTestImplementation(AndroidX.test.espresso.core)
-//    androidTestImplementation("de.mannodermaus.junit5:android-test-compose-junit6:2.0.1")
-//    androidTestImplementation("de.mannodermaus.junit5:android-test-runner-junit6:2.0.1")
-    androidTestImplementation(platform("org.junit:junit-bom:5.14.1"))
-    androidTestImplementation("org.junit.jupiter:junit-jupiter-api")
+//    androidTestImplementation("de.mannodermaus.junit5:android-test-compose-junit6:_")
+//    androidTestImplementation("de.mannodermaus.junit5:android-test-runner-junit6:_")
+    androidTestImplementation(platform(Testing.junit.bom))
+    androidTestImplementation(Testing.junit.jupiter.api)
     androidTestImplementation(AndroidX.compose.ui.test)
-//    androidTestImplementation("io.insert-koin:koin-test-junit5:4.2.1")
-//    androidTestImplementation("io.insert-koin:koin-test-junit4:4.2.1")
+//    androidTestImplementation(Koin.junit5)
+//    androidTestImplementation(Koin.junit4)
 
     testImplementation("com.github.gmazzo.okhttp.mock:mock-client:_")
     debugImplementation(Square.leakCanary.android)

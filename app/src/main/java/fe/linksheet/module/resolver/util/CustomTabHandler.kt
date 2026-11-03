@@ -1,26 +1,28 @@
 package fe.linksheet.module.resolver.util
 
+import android.os.Bundle
 import androidx.browser.customtabs.CustomTabsIntent
 import app.linksheet.mozilla.components.support.utils.SafeIntent
 
 object CustomTabHandler {
-    private const val EXTRA_SESSION = CustomTabsIntent.EXTRA_SESSION
-    private const val EXTRA_INDICATOR = "customtabs.extra"
+    private val CUSTOM_TAB_EXTRAS_PREFIXES = arrayOf(
+        "android.support.customtabs.extra.",
+        "androidx.browser.customtabs.extra.",
+        "com.android.browser.",
+        "org.chromium.chrome.browser.customtabs.",
+    )
 
     fun getInfo(intent: SafeIntent, allowCustomTab: Boolean): CustomTabInfo {
-        val isCustomTab = intent.hasExtra(EXTRA_SESSION)
-        if (!isCustomTab || !allowCustomTab) return CustomTabInfo(false, null)
-
-        val dropExtras = intent.extras
-            ?.keySet()
-            ?.filter { !it.contains(EXTRA_INDICATOR) }
-            ?: emptyList()
-
-        return CustomTabInfo(true, dropExtras)
+        return when (val info = getInfo2(intent, allowCustomTab)) {
+            is CustomTabInfo2.Allowed -> CustomTabInfo(true, info.dropExtras)
+            // Not strictly correct as isCustomTab should be true even if we don't allow custom tabs; This is addressed by getInfo2
+            CustomTabInfo2.NotAllowed -> CustomTabInfo(false, null)
+            CustomTabInfo2.NotApplicable -> CustomTabInfo(false, null)
+        }
     }
 
     fun getInfo2(intent: SafeIntent, allowCustomTab: Boolean): CustomTabInfo2 {
-        val isCustomTab = intent.hasExtra(EXTRA_SESSION)
+        val isCustomTab = intent.hasExtra(CustomTabsIntent.EXTRA_SESSION)
         if (!isCustomTab) {
             return CustomTabInfo2.NotApplicable
         }
@@ -29,16 +31,22 @@ object CustomTabHandler {
             return CustomTabInfo2.NotAllowed
         }
 
-        val dropExtras = intent.extras
-            ?.keySet()
-            ?.filter { extra -> !extra.contains(EXTRA_INDICATOR) }
-            ?: emptyList()
+        val nonCustomTabExtrasToDrop = filterExtras(intent.extras, false)
+        return CustomTabInfo2.Allowed(nonCustomTabExtrasToDrop)
+    }
 
-        return CustomTabInfo2.Allowed(dropExtras)
+    fun filterExtras(extras: Bundle?, returnCustomTabExtras: Boolean): List<String> {
+        return extras
+            ?.keySet()
+            ?.filter { extra ->
+                val isCustomTabExtra = CUSTOM_TAB_EXTRAS_PREFIXES.any { extra.startsWith(it) }
+                if (returnCustomTabExtras) isCustomTabExtra else !isCustomTabExtra
+            }
+            ?: emptyList()
     }
 }
 
-data class CustomTabInfo(val isCustomTab: Boolean, val extras: List<String>?)
+data class CustomTabInfo(val isCustomTab: Boolean, val dropExtras: List<String>?)
 
 sealed interface CustomTabInfo2 {
     val dropExtras: List<String>
@@ -46,5 +54,5 @@ sealed interface CustomTabInfo2 {
 
     data object NotApplicable : CustomTabInfo2
     data object NotAllowed : CustomTabInfo2
-    data class Allowed(override val dropExtras: List<String> ) : CustomTabInfo2
+    data class Allowed(override val dropExtras: List<String>) : CustomTabInfo2
 }
