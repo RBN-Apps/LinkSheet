@@ -8,11 +8,7 @@ import android.widget.Toast
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.ExperimentalMaterial3Api
-import androidx.compose.runtime.Composable
-import androidx.compose.runtime.LaunchedEffect
-import androidx.compose.runtime.getValue
-import androidx.compose.runtime.remember
-import androidx.compose.runtime.rememberCoroutineScope
+import androidx.compose.runtime.*
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.unit.dp
@@ -27,9 +23,9 @@ import app.linksheet.compose.extension.collectOnIO
 import app.linksheet.feature.downloader.core.DownloaderMode
 import app.linksheet.feature.libredirect.database.entity.LibRedirectDefault
 import app.linksheet.feature.profile.core.switchTo
-import fe.composekit.mozilla.components.support.base.log.logger.Logger
 import app.linksheet.mozilla.components.support.utils.toSafeIntent
 import fe.composekit.extension.setText
+import fe.composekit.mozilla.components.support.base.log.logger.Logger
 import fe.composekit.preference.collectAsStateWithLifecycle
 import fe.linksheet.R
 import fe.linksheet.activity.bottomsheet.AppInteraction
@@ -49,20 +45,15 @@ import fe.linksheet.activity.bottomsheet.content.success.url.LinkParameterDialog
 import fe.linksheet.activity.bottomsheet.ShareUrlInteraction
 import fe.linksheet.activity.bottomsheet.StartDownloadInteraction
 import fe.linksheet.activity.bottomsheet.SwitchProfileInteraction
+import fe.linksheet.activity.bottomsheet.OpenExternallyInteraction
 import fe.linksheet.activity.bottomsheet.compat.SettingsObserver
 import fe.linksheet.activity.bottomsheet.compat.m3fix.M3FixModalBottomSheet
 import fe.linksheet.activity.bottomsheet.compat.m3fix.rememberM3FixModalBottomSheetState
 import fe.linksheet.activity.bottomsheet.content.failure.FailureSheetContentWrapper
 import fe.linksheet.activity.bottomsheet.content.pending.LoadingIndicatorWrapper
-import fe.linksheet.activity.bottomsheet.hideAndFinish
 import fe.linksheet.composable.ui.AppTheme
 import fe.linksheet.extension.android.showToast
-import fe.linksheet.module.resolver.FollowRedirectsMode
-import fe.linksheet.module.resolver.ImprovedIntentResolver
-import fe.linksheet.module.resolver.IntentResolveResult
-import fe.linksheet.module.resolver.ResolveEvent
-import fe.linksheet.module.resolver.ResolveOptions
-import fe.linksheet.module.resolver.ResolverInteraction
+import fe.linksheet.module.resolver.*
 import fe.linksheet.module.resolver.util.LaunchIntent
 import fe.linksheet.module.resolver.util.LaunchOtherProfileIntent
 import fe.linksheet.module.resolver.util.Launchable
@@ -71,11 +62,7 @@ import fe.linksheet.util.intent.Intents
 import fe.linksheet.util.intent.StandardIntents
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
-import kotlinx.coroutines.flow.SharingStarted
-import kotlinx.coroutines.flow.collectLatest
-import kotlinx.coroutines.flow.map
-import kotlinx.coroutines.flow.mapNotNull
-import kotlinx.coroutines.flow.stateIn
+import kotlinx.coroutines.flow.*
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import org.koin.androidx.viewmodel.ext.android.viewModel
@@ -212,6 +199,10 @@ class BottomSheetActivity : BaseComponentActivity(), KoinComponent {
                     handleInteraction(
                         interaction = interaction,
                         resolveResult = resolveResult,
+                        isExpanded = sheetState.isExpanded(),
+                        expandSheet = {
+                            coroutineScope.launch { sheetState.expand() }
+                        },
                         hideSheet = {
                             coroutineScope.launch { sheetState.hide() }
                         }
@@ -273,7 +264,7 @@ class BottomSheetActivity : BaseComponentActivity(), KoinComponent {
                 val bottomSheetProfileSwitcher by viewModel.bottomSheetProfileSwitcher.collectAsStateWithLifecycle()
                 val bottomSheetNativeLabel by viewModel.bottomSheetNativeLabel.collectAsStateWithLifecycle()
                 val gridLayout by viewModel.gridLayout.collectAsStateWithLifecycle()
-                val previewUrl by viewModel.previewUrl.collectAsStateWithLifecycle()
+                val enableActionBar by viewModel.enableActionBar.collectAsStateWithLifecycle()
                 val hideBottomSheetChoiceButtons by viewModel.hideBottomSheetChoiceButtons.collectAsStateWithLifecycle()
                 val alwaysShowPackageName by viewModel.alwaysShowPackageName.collectAsStateWithLifecycle()
                 val followRedirectsEnabled by viewModel.followRedirectsEnabled.collectAsStateWithLifecycle()
@@ -298,6 +289,7 @@ class BottomSheetActivity : BaseComponentActivity(), KoinComponent {
                         )
                     }
                 }
+                val enableOpenExternallyButton by viewModel.enableOpenExternallyButton.collectAsStateWithLifecycle()
 
                 BottomSheetApps(
                     modifier = modifier,
@@ -305,6 +297,7 @@ class BottomSheetActivity : BaseComponentActivity(), KoinComponent {
                     imageLoader = viewModel.imageLoader,
                     enableDownloader = downloaderEnable,
                     enableIgnoreLibRedirectButton = enableIgnoreLibRedirectButton,
+                    enableOpenExternallyButton = enableOpenExternallyButton,
                     profiles = if (bottomSheetProfileSwitcher) viewModel.profileSwitcher.getProfiles() else null,
                     enableManualRedirect = followRedirectsEnabled && followRedirectsMode == FollowRedirectsMode.Manual,
                     enableManualDownload = downloaderEnable && downloaderMode == DownloaderMode.Manual,
@@ -315,7 +308,7 @@ class BottomSheetActivity : BaseComponentActivity(), KoinComponent {
                     isPrivateBrowser = viewModel::isPrivateBrowser,
                     controller = controller,
                     showPackage = alwaysShowPackageName,
-                    previewUrl = previewUrl,
+                    enableActionBar = enableActionBar,
                     hideBottomSheetChoiceButtons = hideBottomSheetChoiceButtons,
                     urlCardDoubleTap = doubleTapUrl,
                     displayUri = viewModel.displayUri(resolveResult, parameterSelection, trackingParametersRemoved),
@@ -346,6 +339,8 @@ class BottomSheetActivity : BaseComponentActivity(), KoinComponent {
     private fun handleInteraction(
         interaction: BottomSheetInteraction,
         resolveResult: IntentResolveResult,
+        isExpanded: Boolean,
+        expandSheet: () -> Unit,
         hideSheet: () -> Job
     ) {
         when (interaction) {
@@ -355,7 +350,7 @@ class BottomSheetActivity : BaseComponentActivity(), KoinComponent {
                         showToast(R.string.something_went_wrong, Toast.LENGTH_SHORT)
                     } else {
                         (resolveResult as? IntentResolveResult.Default)
-                            ?.let { viewModel.handle(this@BottomSheetActivity, it, interaction) }
+                            ?.let { viewModel.handle(this@BottomSheetActivity, it, interaction, isExpanded, expandSheet) }
                             ?.let { handleLaunch(it) }
                     }
                 }
@@ -398,6 +393,11 @@ class BottomSheetActivity : BaseComponentActivity(), KoinComponent {
 
             is RemoveTrackingParametersInteraction -> {
                 viewModel.removeTrackingParameters()
+            }
+
+            is OpenExternallyInteraction -> {
+                val selfIntent = viewModel.selfIntentUseCase.buildOpenExternallyIntent(interaction.intent)
+                onNewIntent(selfIntent)
             }
 
             is CopyUrlInteraction -> {

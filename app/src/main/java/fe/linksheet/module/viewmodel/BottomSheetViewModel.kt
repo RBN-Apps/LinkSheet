@@ -21,20 +21,15 @@ import app.linksheet.feature.browser.core.Browser
 import app.linksheet.feature.browser.usecase.PrivateBrowserUseCase
 import app.linksheet.feature.downloader.core.DownloadCheckResult
 import app.linksheet.feature.profile.core.ProfileSwitcher
-import fe.composekit.mozilla.components.support.base.log.logger.Logger
 import app.linksheet.mozilla.components.support.utils.SafeIntent
 import coil3.ImageLoader
 import fe.composekit.extension.getSystemServiceOrThrow
+import fe.composekit.mozilla.components.support.base.log.logger.Logger
 import fe.composekit.preference.asFunction
 import fe.linksheet.R
 import fe.linksheet.activity.BottomSheetActivity
-import fe.linksheet.activity.bottomsheet.AppClickInteraction
-import fe.linksheet.activity.bottomsheet.AppInteraction
-import fe.linksheet.activity.bottomsheet.ChoiceButtonInteraction
-import fe.linksheet.activity.bottomsheet.ClickModifier
-import fe.linksheet.activity.bottomsheet.ClickType
-import fe.linksheet.activity.bottomsheet.PreferredAppChoiceButtonInteraction
-import fe.linksheet.activity.bottomsheet.TapConfig
+import fe.linksheet.activity.bottomsheet.*
+import fe.linksheet.extension.android.tryStartActivity
 import fe.linksheet.module.database.entity.AppSelectionHistory
 import fe.linksheet.module.database.entity.PreferredApp
 import fe.linksheet.module.preference.app.AppPreferences
@@ -45,15 +40,10 @@ import fe.linksheet.module.repository.PreferredAppRepository
 import fe.linksheet.module.resolver.IntentResolveResult
 import fe.linksheet.module.resolver.IntentResolver
 import fe.linksheet.module.resolver.ResolveOptions
-import fe.linksheet.module.resolver.util.IntentLauncher
-import fe.linksheet.module.resolver.util.LaunchIntent
-import fe.linksheet.module.resolver.util.LaunchMainIntent
-import fe.linksheet.module.resolver.util.LaunchOtherProfileIntent
-import fe.linksheet.module.resolver.util.LaunchRawIntent
-import fe.linksheet.module.resolver.util.Launchable
+import fe.linksheet.module.resolver.SelfIntentUseCase
+import fe.linksheet.module.resolver.util.*
 import fe.linksheet.module.resolver.workaround.GithubWorkaround
 import fe.linksheet.module.viewmodel.base.BaseViewModel
-import fe.linksheet.extension.android.tryStartActivity
 import fe.clearurlskt.removeAllQueryParameters
 import fe.linksheet.util.intent.StandardIntents
 import fe.std.result.isSuccess
@@ -64,7 +54,7 @@ import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import org.koin.core.component.KoinComponent
 import java.io.File
-import java.util.Locale
+import java.util.*
 
 class BottomSheetViewModel(
     val context: Application,
@@ -78,23 +68,25 @@ class BottomSheetViewModel(
     private val intentLauncher: IntentLauncher,
     private val metaDataHandler: MetaDataHandler,
     private val privateBrowserUseCase: PrivateBrowserUseCase,
+    val selfIntentUseCase: SelfIntentUseCase
 ) : BaseViewModel(preferenceRepository), KoinComponent {
     private val logger = Logger("BottomSheetViewModel")
     val clipboardManager = context.getSystemServiceOrThrow<ClipboardManager>()
     val downloadManager = context.getSystemServiceOrThrow<DownloadManager>()
 
     val themeAmoled = preferenceRepository.asViewModelState(AppPreferences.themeV2.amoled)
-    val hideAfterCopying = preferenceRepository.asFunction(AppPreferences.bottomSheet.hideAfterCopying)
+    val hideAfterCopying = preferenceRepository.asFunction(AppPreferences.bottomSheet.actionBar.hideAfterCopying)
     val urlCopiedToast = preferenceRepository.asFunction(AppPreferences.notifications.urlCopiedToast)
     val downloadStartedToast = preferenceRepository.asFunction(AppPreferences.notifications.downloadStartedToast)
     val gridLayout = preferenceRepository.asViewModelState(AppPreferences.bottomSheet.gridLayout)
     val resolveViaToast = preferenceRepository.asViewModelState(AppPreferences.notifications.resolveViaToast)
     val resolveViaFailedToast = preferenceRepository.asViewModelState(AppPreferences.notifications.resolveViaFailedToast)
-    val previewUrl = preferenceRepository.asViewModelState(AppPreferences.previewUrl)
+    val enableActionBar = preferenceRepository.asViewModelState(AppPreferences.bottomSheet.actionBar.enable)
     val enableRequestPrivateBrowsingButton = preferenceRepository.asViewModelState(AppPreferences.browser.enable)
-    val showAsReferrer = preferenceRepository.asViewModelState(AppPreferences.showLinkSheetAsReferrer)
+    val showAsReferrer = preferenceRepository.asViewModelState(AppPreferences.privacy.showLinkSheetAsReferrer)
     val hideBottomSheetChoiceButtons = preferenceRepository.asViewModelState(AppPreferences.bottomSheet.hideBottomSheetChoiceButtons)
     val enableIgnoreLibRedirectButton = preferenceRepository.asViewModelState(AppPreferences.libRedirect.enableIgnoreLibRedirectButton)
+    val enableOpenExternallyButton = preferenceRepository.asViewModelState(AppPreferences.bottomSheet.actionBar.enableOpenExternallyButton)
     val bottomSheetProfileSwitcher = preferenceRepository.asViewModelState(AppPreferences.profileSwitcher.enable)
     val tapConfigSingle = preferenceRepository.asViewModelState(AppPreferences.bottomSheet.tapConfig.single)
     val tapConfigDouble = preferenceRepository.asViewModelState(AppPreferences.bottomSheet.tapConfig.double)
@@ -102,7 +94,7 @@ class BottomSheetViewModel(
     val expandOnAppSelect = preferenceRepository.asViewModelState(AppPreferences.bottomSheet.expandOnAppSelect)
     val bottomSheetNativeLabel = preferenceRepository.asViewModelState(AppPreferences.bottomSheet.bottomSheetNativeLabel)
     val expandFully = preferenceRepository.asViewModelState(AppPreferences.bottomSheet.expandFully)
-    val doubleTapUrl = preferenceRepository.asViewModelState(AppPreferences.bottomSheet.doubleTapUrl)
+    val doubleTapUrl = preferenceRepository.asViewModelState(AppPreferences.bottomSheet.actionBar.doubleTapUrl)
     val selectLinkParameters = preferenceRepository.asViewModelState(AppPreferences.bottomSheet.selectLinkParameters)
     val openWithoutTrackingButton =
         preferenceRepository.asViewModelState(AppPreferences.bottomSheet.openWithoutTrackingButton)
@@ -370,6 +362,8 @@ class BottomSheetViewModel(
         activity: BottomSheetActivity,
         result: IntentResolveResult.Default,
         interaction: AppInteraction,
+        expanded: Boolean,
+        requestExpand: () -> Unit
     ): LaunchIntent? {
         val info = interaction.info ?: return null
         val intent = effectiveIntent(result)
@@ -377,9 +371,8 @@ class BottomSheetViewModel(
             return handleClick(
                 activity = activity,
                 index = interaction.index,
-                isExpanded = false,
-//                    isExpanded = sheetState.isExpanded(),
-                requestExpand = { },
+                isExpanded = expanded,
+                requestExpand = requestExpand,
                 result = intent,
                 info = info,
                 type = interaction.type,

@@ -20,6 +20,7 @@ import app.linksheet.feature.libredirect.LibRedirectResolver
 import app.linksheet.feature.libredirect.LibRedirectResult
 import app.linksheet.feature.libredirect.database.entity.LibRedirectDefault
 import app.linksheet.mozilla.components.support.utils.SafeIntent
+import fe.clearurlskt.ClearUrlSettings
 import fe.clearurlskt.ClearUrls
 import fe.clearurlskt.loader.BundledClearURLConfigLoader
 import fe.composekit.core.AndroidAppPackage
@@ -46,19 +47,9 @@ import fe.linksheet.util.intent.parser.UriException
 import fe.linksheet.util.intent.parser.UriParseException
 import fe.std.result.getOrNull
 import fe.std.result.isFailure
-import kotlinx.coroutines.CancellationException
-import kotlinx.coroutines.CoroutineDispatcher
-import kotlinx.coroutines.CoroutineScope
-import kotlinx.coroutines.CoroutineStart
-import kotlinx.coroutines.Deferred
-import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.async
-import kotlinx.coroutines.coroutineScope
-import kotlinx.coroutines.currentCoroutineContext
-import kotlinx.coroutines.ensureActive
+import kotlinx.coroutines.*
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.asStateFlow
-import kotlinx.coroutines.withContext
 import me.saket.unfurl.UnfurlResult
 import me.saket.unfurl.Unfurler
 
@@ -144,7 +135,7 @@ class ImprovedIntentResolver(
             return@scope searchIntentResult
         }
 
-        val uriResult = IntentParser.getUriFromIntent(intent)
+        val uriResult = IntentParser.getUriFromIntent(intent, settings.parseTextUrlsToHttps())
 
         if (uriResult.isFailure()) {
             logger.error("Failed to parse intent ${intent.action}")
@@ -163,6 +154,7 @@ class ImprovedIntentResolver(
 
         val resolveEmbeds = settings.resolveEmbeds()
         val useClearUrls = settings.useClearUrls()
+        val clearUrlsSkipUnchanged = settings.clearUrlsSkipUnchanged()
         val useFastForwardRules = settings.useFastForwardRules()
 
         val shouldRunUriModifiers = resolveEmbeds || useClearUrls || useFastForwardRules
@@ -177,7 +169,8 @@ class ImprovedIntentResolver(
             uri = uri,
             resolveEmbeds = resolveEmbeds,
             clearUrl = useClearUrls,
-            fastForward = useFastForwardRules
+            fastForward = useFastForwardRules,
+            skipUnchanged = clearUrlsSkipUnchanged
         )
 
         if (uri == null) {
@@ -252,7 +245,8 @@ class ImprovedIntentResolver(
             uri = resolvedUri,
             resolveEmbeds = resolveEmbeds,
             clearUrl = useClearUrls,
-            fastForward = useFastForwardRules
+            fastForward = useFastForwardRules,
+            skipUnchanged = clearUrlsSkipUnchanged
         )
 
         if (uri == null) {
@@ -279,7 +273,7 @@ class ImprovedIntentResolver(
         }
 
         val allowCustomTab = inAppBrowserHandler.shouldAllowCustomTab(
-            referrer = options.referrer,
+            referrer = referringPackage,
             inAppBrowserMode = browserSettings.inAppBrowserSettings()
         )
         val (customTab, dropExtras) = CustomTabHandler.getInfo(intent, allowCustomTab)
@@ -364,7 +358,8 @@ class ImprovedIntentResolver(
             hasSingleMatchingOption = appList.isSingleOption || appList.noBrowsersOnlySingleApp,
             resolveModuleStatus = resolveStatus,
             libRedirectResult = libRedirectResult,
-            downloadable = downloadable
+            downloadable = downloadable,
+            customTab = customTab
         )
     }
 
@@ -565,6 +560,7 @@ class ImprovedIntentResolver(
         resolveEmbeds: Boolean,
         clearUrl: Boolean,
         fastForward: Boolean,
+        skipUnchanged: Boolean
     ): Uri? {
         if (uri?.host == null || uri.scheme == null) return null
         var url = uri.toString()
@@ -581,7 +577,11 @@ class ImprovedIntentResolver(
             logger.error("ClearURLs is enabled, but rules failed to load, ignoring..")
         }
         runUriModifier(clearUrl) {
-            clearUrls?.clearUrl(url, settings.clearUrlsRemoveAllQueryProviders())
+            clearUrls?.clearUrl(
+                url,
+                ClearUrlSettings(skipUnchanged = skipUnchanged),
+                settings.clearUrlsRemoveAllQueryProviders()
+            )
         }?.let { url = it.first }
 
         return runCatching { Uri.parse(url) }.getOrNull()
